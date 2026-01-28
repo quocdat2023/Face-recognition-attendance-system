@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Face Recognition System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">📊 Dashboard</div>
+
+    <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value" id="totalUsers">-</div>
+            <div class="stat-label">Tổng người dùng</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="todayAttendance">-</div>
+            <div class="stat-label">Điểm danh hôm nay</div>
+        </div>
+
+        <div class="stat-card shift-stat">
+            <div class="stat-icon">🌅</div>
+            <div class="stat-value" id="shift1Count">-</div>
+            <div class="stat-label">Ca 1 (6-9h)</div>
+        </div>
+
+        <div class="stat-card shift-stat">
+            <div class="stat-icon">☀️</div>
+            <div class="stat-value" id="shift2Count">-</div>
+            <div class="stat-label">Ca 2 (9-12h)</div>
+        </div>
+
+        <div class="stat-card shift-stat">
+            <div class="stat-icon">🌤️</div>
+            <div class="stat-value" id="shift3Count">-</div>
+            <div class="stat-label">Ca 3 (13-16h)</div>
+        </div>
+
+        <div class="stat-card shift-stat">
+            <div class="stat-icon">🌆</div>
+            <div class="stat-value" id="shift4Count">-</div>
+            <div class="stat-label">Ca 4 (16-19h)</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">📋 Quy tắc điểm danh</div>
+
+    <div class="rules-container">
+        <div class="rule-item">
+            <span class="rule-icon">📅</span>
+            <div class="rule-content">
+                <strong>Ngày được phép</strong>
+                <p>Chỉ được điểm danh vào Thứ 2, Thứ 4, Thứ 6</p>
+            </div>
+        </div>
+
+        <div class="rule-item">
+            <span class="rule-icon">⏰</span>
+            <div class="rule-content">
+                <strong>4 Ca trực</strong>
+                <p>Ca 1: 6-9h | Ca 2: 9-12h | Ca 3: 13-16h | Ca 4: 16-19h</p>
+            </div>
+        </div>
+
+        <div class="rule-item">
+            <span class="rule-icon">🚫</span>
+            <div class="rule-content">
+                <strong>Không trùng lặp</strong>
+                <p>Mỗi người chỉ được điểm danh 1 lần trong 1 ca, 1 ngày</p>
+            </div>
+        </div>
+
+        <div class="rule-item">
+            <span class="rule-icon">📷</span>
+            <div class="rule-content">
+                <strong>Đăng ký 30 ảnh</strong>
+                <p>Chụp 30 ảnh ở các góc độ khác nhau để tăng độ chính xác</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">🚀 Bắt đầu</div>
+
+    <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+        <div class="action-card">
+            <h3>📝 Đăng ký người dùng mới</h3>
+            <p>Chụp 30 ảnh ở các góc độ khác nhau để đăng ký khuôn mặt</p>
+            <a href="/register" class="btn btn-primary" style="margin-top: 1rem;">Đăng ký ngay</a>
+        </div>
+
+        <div class="action-card">
+            <h3>🎯 Điểm danh khuôn mặt</h3>
+            <p>Chọn ngày, ca trực và điểm danh bằng khuôn mặt</p>
+            <a href="/recognize" class="btn btn-success" style="margin-top: 1rem;">Điểm danh</a>
+        </div>
+
+        <div class="action-card">
+            <h3>📋 Xem lịch sử điểm danh</h3>
+            <p>Xem và lọc lịch sử điểm danh theo ngày, ca trực</p>
+            <a href="/attendance" class="btn btn-primary" style="margin-top: 1rem;">Xem ngay</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+    }
+
+    .stat-card.shift-stat {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+    }
+
+    .action-card {
+        background: rgba(51, 65, 85, 0.5);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .action-card:hover {
+        background: rgba(51, 65, 85, 0.8);
+        border-color: var(--primary);
+    }
+
+    .action-card h3 {
+        margin-bottom: 0.75rem;
+        color: var(--text);
+    }
+
+    .action-card p {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .rules-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .rule-item {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem;
+        background: var(--dark-lighter);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+
+    .rule-icon {
+        font-size: 1.5rem;
+    }
+
+    .rule-content strong {
+        color: var(--text);
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .rule-content p {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fetch statistics
+    async function loadStats() {
+        try {
+            const response = await fetch('/api/stats');
+            const data = await response.json();
+
+            document.getElementById('totalUsers').textContent = data.total_users || 0;
+            document.getElementById('todayAttendance').textContent = data.today_attendance || 0;
+
+            // Shift counts
+            if (data.shift_counts) {
+                document.getElementById('shift1Count').textContent = data.shift_counts.shift_1 || 0;
+                document.getElementById('shift2Count').textContent = data.shift_counts.shift_2 || 0;
+                document.getElementById('shift3Count').textContent = data.shift_counts.shift_3 || 0;
+                document.getElementById('shift4Count').textContent = data.shift_counts.shift_4 || 0;
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+            document.getElementById('totalUsers').textContent = '0';
+            document.getElementById('todayAttendance').textContent = '0';
+        }
+    }
+
+    // Load stats on page load
+    loadStats();
+
+    // Refresh stats every 30 seconds
+    setInterval(loadStats, 30000);
+</script>
+{% endblock %}

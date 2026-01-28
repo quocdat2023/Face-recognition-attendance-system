@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block title %}Lịch sử điểm danh - Face Recognition System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">📋 Lịch sử điểm danh</div>
+
+    <!-- Filters -->
+    <div class="filters">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="filterDate">📅 Lọc theo ngày</label>
+                <input type="date" id="filterDate" class="form-control">
+            </div>
+
+            <div class="filter-group">
+                <label for="filterShift">⏰ Lọc theo ca</label>
+                <select id="filterShift" class="form-control">
+                    <option value="">Tất cả ca</option>
+                    <option value="1">Ca 1 (06:00 - 09:00)</option>
+                    <option value="2">Ca 2 (09:00 - 12:00)</option>
+                    <option value="3">Ca 3 (13:00 - 16:00)</option>
+                    <option value="4">Ca 4 (16:00 - 19:00)</option>
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button id="refreshBtn" class="btn btn-primary">
+                    🔄 Làm mới
+                </button>
+                <button id="clearFilterBtn" class="btn btn-secondary">
+                    ✖️ Xóa bộ lọc
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats summary -->
+        <div class="stats-row">
+            <div class="stat-item">
+                <span class="stat-label">Tổng số:</span>
+                <span class="stat-value" id="totalCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Ca 1:</span>
+                <span class="stat-value" id="shift1Count">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Ca 2:</span>
+                <span class="stat-value" id="shift2Count">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Ca 3:</span>
+                <span class="stat-value" id="shift3Count">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Ca 4:</span>
+                <span class="stat-value" id="shift4Count">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingSpinner" class="spinner"></div>
+
+    <div id="tableContainer" style="display: none;">
+        <table id="attendanceTable">
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Tên</th>
+                    <th>Mã số</th>
+                    <th>Ngày</th>
+                    <th>Ca trực</th>
+                    <th>Thời gian</th>
+                    <th>Độ tin cậy</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+
+        <div id="emptyMessage" style="text-align: center; padding: 2rem; color: var(--text-muted); display: none;">
+            📭 Không có dữ liệu điểm danh
+        </div>
+    </div>
+</div>
+
+<style>
+    .filters {
+        background: var(--dark-lighter);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        border: 1px solid var(--border);
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 1.5rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 150px;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--dark);
+        color: var(--text);
+        font-size: 1rem;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .stats-row {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+        flex-wrap: wrap;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+    }
+
+    .stat-value {
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 1.1rem;
+    }
+
+    .btn-secondary {
+        background: var(--dark);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+        background: var(--dark-light);
+    }
+
+    .confidence-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .confidence-high {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success);
+    }
+
+    .confidence-medium {
+        background: rgba(245, 158, 11, 0.2);
+        color: var(--warning);
+    }
+
+    .confidence-low {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--danger);
+    }
+
+    .shift-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: rgba(99, 102, 241, 0.2);
+        color: var(--primary);
+    }
+
+    table {
+        margin-top: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const refreshBtn = document.getElementById('refreshBtn');
+    const clearFilterBtn = document.getElementById('clearFilterBtn');
+    const filterDate = document.getElementById('filterDate');
+    const filterShift = document.getElementById('filterShift');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const tableContainer = document.getElementById('tableContainer');
+    const tableBody = document.getElementById('tableBody');
+    const emptyMessage = document.getElementById('emptyMessage');
+
+    let attendanceData = [];
+
+    // Format date for display
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('vi-VN', {
+            weekday: 'short',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+    }
+
+    // Format time for display
+    function formatTime(isoString) {
+        const date = new Date(isoString);
+        return date.toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
+    // Get confidence badge class
+    function getConfidenceBadge(confidence) {
+        const percent = confidence * 100;
+        let badgeClass = 'confidence-low';
+
+        if (percent >= 80) {
+            badgeClass = 'confidence-high';
+        } else if (percent >= 60) {
+            badgeClass = 'confidence-medium';
+        }
+
+        return `<span class="confidence-badge ${badgeClass}">${percent.toFixed(1)}%</span>`;
+    }
+
+    // Get shift badge
+    function getShiftBadge(shift, shiftName) {
+        return `<span class="shift-badge">${shiftName || `Ca ${shift}`}</span>`;
+    }
+
+    // Update stats
+    function updateStats(data) {
+        document.getElementById('totalCount').textContent = data.length;
+
+        const shiftCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+        data.forEach(record => {
+            if (record.shift && shiftCounts.hasOwnProperty(record.shift)) {
+                shiftCounts[record.shift]++;
+            }
+        });
+
+        document.getElementById('shift1Count').textContent = shiftCounts[1];
+        document.getElementById('shift2Count').textContent = shiftCounts[2];
+        document.getElementById('shift3Count').textContent = shiftCounts[3];
+        document.getElementById('shift4Count').textContent = shiftCounts[4];
+    }
+
+    // Render table
+    function renderTable(data) {
+        tableBody.innerHTML = '';
+        updateStats(data);
+
+        if (data.length === 0) {
+            emptyMessage.style.display = 'block';
+            return;
+        }
+
+        emptyMessage.style.display = 'none';
+
+        data.forEach((record, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td><strong>${record.name}</strong></td>
+                <td>${record.user_id}</td>
+                <td>${formatDate(record.date)}</td>
+                <td>${getShiftBadge(record.shift, record.shift_name)}</td>
+                <td>${formatTime(record.timestamp)}</td>
+                <td>${getConfidenceBadge(record.confidence || 0)}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    // Load attendance data
+    async function loadAttendance() {
+        loadingSpinner.style.display = 'block';
+        tableContainer.style.display = 'none';
+
+        try {
+            let url = '/api/attendance?limit=200';
+
+            // Add filters
+            if (filterDate.value) {
+                url += `&date=${filterDate.value}`;
+            }
+            if (filterShift.value) {
+                url += `&shift=${filterShift.value}`;
+            }
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            attendanceData = data.attendance || [];
+
+            loadingSpinner.style.display = 'none';
+            tableContainer.style.display = 'block';
+
+            renderTable(attendanceData);
+
+        } catch (error) {
+            console.error('Error loading attendance:', error);
+            loadingSpinner.style.display = 'none';
+            tableContainer.style.display = 'block';
+            emptyMessage.style.display = 'block';
+            emptyMessage.textContent = '❌ Lỗi tải dữ liệu. Vui lòng thử lại!';
+        }
+    }
+
+    // Clear filters
+    function clearFilters() {
+        filterDate.value = '';
+        filterShift.value = '';
+        loadAttendance();
+    }
+
+    // Event listeners
+    refreshBtn.addEventListener('click', loadAttendance);
+    clearFilterBtn.addEventListener('click', clearFilters);
+    filterDate.addEventListener('change', loadAttendance);
+    filterShift.addEventListener('change', loadAttendance);
+
+    // Set today's date as default filter
+    const today = new Date().toISOString().split('T')[0];
+    filterDate.value = today;
+
+    // Load data on page load
+    loadAttendance();
+
+    // Auto refresh every 30 seconds
+    setInterval(loadAttendance, 30000);
+</script>
+{% endblock %}

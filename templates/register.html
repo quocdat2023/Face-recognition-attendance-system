@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block title %}Đăng ký - Face Recognition System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">📝 Đăng ký người dùng mới (30 ảnh)</div>
+
+    <div id="alertContainer"></div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem;">
+        <!-- Camera Preview -->
+        <div>
+            <h3 style="margin-bottom: 1rem;">📷 Chụp 30 ảnh khuôn mặt</h3>
+            <div class="video-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="progress-container" style="margin-top: 1rem;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="captureCount">0</span> / 30 ảnh
+                </div>
+            </div>
+
+            <!-- Capture instructions -->
+            <div id="instructions" class="instructions">
+                <h4>📋 Hướng dẫn chụp ảnh:</h4>
+                <ul>
+                    <li id="step1" class="active">Nhìn thẳng vào camera (5 ảnh)</li>
+                    <li id="step2">Quay mặt sang trái (5 ảnh)</li>
+                    <li id="step3">Quay mặt sang phải (5 ảnh)</li>
+                    <li id="step4">Nghiêng đầu lên (5 ảnh)</li>
+                    <li id="step5">Nghiêng đầu xuống (5 ảnh)</li>
+                    <li id="step6">Các góc độ khác (5 ảnh)</li>
+                </ul>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button id="startCaptureBtn" class="btn btn-primary" style="flex: 1;">
+                    ▶️ Bắt đầu chụp tự động
+                </button>
+                <button id="stopCaptureBtn" class="btn btn-danger" style="flex: 1;" disabled>
+                    ⏸️ Dừng
+                </button>
+            </div>
+
+            <button id="resetBtn" class="btn btn-secondary" style="width: 100%; margin-top: 0.5rem;">
+                🔄 Chụp lại từ đầu
+            </button>
+        </div>
+
+        <!-- Registration Form -->
+        <div>
+            <h3 style="margin-bottom: 1rem;">ℹ️ Thông tin người dùng</h3>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="name">Họ và tên *</label>
+                    <input type="text" id="name" name="name" required placeholder="Nhập họ và tên">
+                </div>
+
+                <div class="form-group">
+                    <label for="userId">Mã số *</label>
+                    <input type="text" id="userId" name="userId" required placeholder="Nhập mã số (ID)">
+                </div>
+
+                <div class="form-group">
+                    <label>Ảnh đã chụp</label>
+                    <div id="capturedImagesContainer" class="captured-grid">
+                        <p style="color: var(--text-muted); font-style: italic; grid-column: span 5;">
+                            Chưa chụp ảnh. Nhấn "Bắt đầu chụp tự động" để bắt đầu.
+                        </p>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="btn btn-success" style="width: 100%;" disabled>
+                    ✅ Đăng ký (cần đủ 30 ảnh)
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    #canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+    }
+
+    .progress-container {
+        background: var(--dark-lighter);
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    .progress-bar {
+        background: var(--dark);
+        border-radius: 4px;
+        height: 20px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        height: 100%;
+        transition: width 0.3s ease;
+        border-radius: 4px;
+    }
+
+    .progress-text {
+        text-align: center;
+        margin-top: 0.5rem;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .instructions {
+        background: var(--dark-lighter);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .instructions h4 {
+        margin-bottom: 0.75rem;
+        color: var(--primary);
+    }
+
+    .instructions ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .instructions li {
+        padding: 0.5rem;
+        border-radius: 4px;
+        margin-bottom: 0.25rem;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+    }
+
+    .instructions li.active {
+        background: rgba(99, 102, 241, 0.2);
+        color: var(--primary);
+        font-weight: 600;
+    }
+
+    .instructions li.done {
+        background: rgba(16, 185, 129, 0.2);
+        color: var(--success);
+    }
+
+    .captured-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.5rem;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 0.5rem;
+        background: var(--dark-lighter);
+        border-radius: 8px;
+    }
+
+    .captured-grid img {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 2px solid var(--border);
+    }
+
+    .captured-grid img.valid {
+        border-color: var(--success);
+    }
+
+    .captured-grid img.invalid {
+        border-color: var(--danger);
+    }
+
+    .btn-secondary {
+        background: var(--dark-lighter);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+        background: var(--dark-light);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const startCaptureBtn = document.getElementById('startCaptureBtn');
+    const stopCaptureBtn = document.getElementById('stopCaptureBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const registerForm = document.getElementById('registerForm');
+    const alertContainer = document.getElementById('alertContainer');
+    const capturedImagesContainer = document.getElementById('capturedImagesContainer');
+    const progressFill = document.getElementById('progressFill');
+    const captureCountSpan = document.getElementById('captureCount');
+
+    let stream = null;
+    let capturedImages = [];
+    let captureInterval = null;
+    let isCapturing = false;
+    const TARGET_IMAGES = 30;
+    const CAPTURE_INTERVAL_MS = 500; // Capture every 500ms
+
+    // Show alert message
+    function showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
+        alertContainer.innerHTML = '';
+        alertContainer.appendChild(alertDiv);
+
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+
+    // Update progress
+    function updateProgress() {
+        const percent = (capturedImages.length / TARGET_IMAGES) * 100;
+        progressFill.style.width = `${percent}%`;
+        captureCountSpan.textContent = capturedImages.length;
+
+        // Update step indicators
+        const stepsPerPhase = 5;
+        const currentPhase = Math.floor(capturedImages.length / stepsPerPhase) + 1;
+
+        for (let i = 1; i <= 6; i++) {
+            const step = document.getElementById(`step${i}`);
+            step.classList.remove('active', 'done');
+
+            if (i < currentPhase) {
+                step.classList.add('done');
+            } else if (i === currentPhase && capturedImages.length < TARGET_IMAGES) {
+                step.classList.add('active');
+            }
+        }
+
+        // Enable submit button when we have enough images
+        if (capturedImages.length >= TARGET_IMAGES) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ Đăng ký';
+            stopCapture();
+            showAlert(`✅ Đã chụp đủ ${TARGET_IMAGES} ảnh! Nhấn Đăng ký để hoàn tất.`, 'success');
+        }
+    }
+
+    // Add captured image to grid
+    function addCapturedImage(dataUrl, isValid) {
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.className = isValid ? 'valid' : 'invalid';
+
+        // Remove placeholder text
+        const placeholder = capturedImagesContainer.querySelector('p');
+        if (placeholder) placeholder.remove();
+
+        capturedImagesContainer.appendChild(img);
+    }
+
+    // Start camera
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 640, height: 480 }
+            });
+            video.srcObject = stream;
+
+            video.addEventListener('loadedmetadata', () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            });
+
+            showAlert('Camera đã sẵn sàng! Nhấn "Bắt đầu chụp tự động" để chụp 30 ảnh.', 'success');
+        } catch (error) {
+            console.error('Camera error:', error);
+            showAlert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.', 'error');
+        }
+    }
+
+    // Capture single image
+    function captureImage() {
+        if (capturedImages.length >= TARGET_IMAGES) {
+            stopCapture();
+            return;
+        }
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        capturedImages.push(dataUrl);
+        addCapturedImage(dataUrl, true);
+        updateProgress();
+    }
+
+    // Start automatic capture
+    function startCapture() {
+        if (capturedImages.length >= TARGET_IMAGES) {
+            showAlert('Đã chụp đủ ảnh!', 'info');
+            return;
+        }
+
+        isCapturing = true;
+        startCaptureBtn.disabled = true;
+        stopCaptureBtn.disabled = false;
+
+        showAlert('🎬 Đang chụp tự động... Hãy quay mặt theo hướng dẫn!', 'info');
+
+        captureInterval = setInterval(captureImage, CAPTURE_INTERVAL_MS);
+    }
+
+    // Stop capture
+    function stopCapture() {
+        isCapturing = false;
+        startCaptureBtn.disabled = false;
+        stopCaptureBtn.disabled = true;
+
+        if (captureInterval) {
+            clearInterval(captureInterval);
+            captureInterval = null;
+        }
+    }
+
+    // Reset all captured images
+    function resetCapture() {
+        stopCapture();
+        capturedImages = [];
+        capturedImagesContainer.innerHTML = '<p style="color: var(--text-muted); font-style: italic; grid-column: span 5;">Chưa chụp ảnh. Nhấn "Bắt đầu chụp tự động" để bắt đầu.</p>';
+        updateProgress();
+        submitBtn.disabled = true;
+        submitBtn.textContent = '✅ Đăng ký (cần đủ 30 ảnh)';
+        showAlert('Đã xóa tất cả ảnh. Sẵn sàng chụp lại.', 'info');
+    }
+
+    // Event listeners
+    startCaptureBtn.addEventListener('click', startCapture);
+    stopCaptureBtn.addEventListener('click', stopCapture);
+    resetBtn.addEventListener('click', resetCapture);
+
+    // Submit registration
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (capturedImages.length < 5) {
+            showAlert('Vui lòng chụp ít nhất 5 ảnh!', 'error');
+            return;
+        }
+
+        const name = document.getElementById('name').value;
+        const userId = document.getElementById('userId').value;
+
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; margin: 0 auto;"></div> Đang xử lý...';
+
+        try {
+            // Create form data with all images as JSON
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('user_id', userId);
+            formData.append('images', JSON.stringify(capturedImages));
+
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showAlert(`✅ ${data.message}`, 'success');
+
+                // Reset form
+                registerForm.reset();
+                resetCapture();
+
+                // Redirect to dashboard after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                showAlert(`❌ Lỗi: ${data.detail || 'Đăng ký thất bại'}`, 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✅ Đăng ký';
+            }
+        } catch (error) {
+            console.error('Registration error:', error);
+            showAlert('❌ Lỗi kết nối. Vui lòng thử lại!', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✅ Đăng ký';
+        }
+    });
+
+    // Start camera on page load
+    startCamera();
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        stopCapture();
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+</script>
+{% endblock %}
