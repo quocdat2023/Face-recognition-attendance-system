@@ -177,6 +177,14 @@
 
 {% block scripts %}
 <script>
+    /* ===================== CONFIG ===================== */
+    const CONFIDENCE_THRESHOLD = 0.7;
+    const RECOGNIZE_INTERVAL_MS = 2000;
+
+    // Allowed weekdays: Monday, Wednesday, Friday
+    const allowedWeekdays = [1, 3, 5]; // JS: 0=Sun
+
+    /* ===================== DOM ===================== */
     const video = document.getElementById('video');
     const overlay = document.getElementById('overlay');
     const startBtn = document.getElementById('startBtn');
@@ -189,308 +197,202 @@
     const selectedDateText = document.getElementById('selectedDateText');
     const selectedShiftText = document.getElementById('selectedShiftText');
 
+    /* ===================== STATE ===================== */
     let stream = null;
     let recognitionInterval = null;
     let isRecognizing = false;
 
-    // Allowed weekdays: 0=Monday, 2=Wednesday, 4=Friday
-    const allowedWeekdays = [1, 3, 5]; // In JS: 0=Sunday, 1=Monday, 2=Tuesday, etc.
-    // So Monday=1, Wednesday=3, Friday=5 in JavaScript
-
-    // Show alert message
+    /* ===================== UTILS ===================== */
     function showAlert(message, type = 'info') {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type}`;
-        alertDiv.textContent = message;
         alertContainer.innerHTML = '';
-        alertContainer.appendChild(alertDiv);
-
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 5000);
+        const div = document.createElement('div');
+        div.className = `alert alert-${type}`;
+        div.textContent = message;
+        alertContainer.appendChild(div);
+        setTimeout(() => div.remove(), 5000);
     }
 
-    // Get Vietnamese weekday name
     function getWeekdayName(date) {
-        const weekday = date.getDay();
-        const names = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
-        return names[weekday];
+        return ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"][date.getDay()];
     }
 
-    // Check if date is allowed
     function isAllowedDate(dateStr) {
-        const date = new Date(dateStr);
-        const weekday = date.getDay();
-        return allowedWeekdays.includes(weekday);
+        return allowedWeekdays.includes(new Date(dateStr).getDay());
     }
 
-    // Update date selection
+    /* ===================== DATE / SHIFT ===================== */
     function updateDateSelection() {
-        const dateStr = attendanceDate.value;
-
-        if (!dateStr) {
-            dateError.style.display = 'none';
+        const value = attendanceDate.value;
+        if (!value) {
             startBtn.disabled = true;
             selectedDateText.textContent = '-';
             return;
         }
 
-        const date = new Date(dateStr);
-        const weekdayName = getWeekdayName(date);
-        selectedDateText.textContent = `${weekdayName}, ${dateStr}`;
+        const date = new Date(value);
+        const weekday = getWeekdayName(date);
+        selectedDateText.textContent = `${weekday}, ${value}`;
 
-        if (isAllowedDate(dateStr)) {
-            dateError.style.display = 'none';
-            startBtn.disabled = false;
-            attendanceDate.style.borderColor = 'var(--success)';
-        } else {
-            dateError.style.display = 'block';
+        if (!isAllowedDate(value)) {
             startBtn.disabled = true;
             attendanceDate.style.borderColor = 'var(--danger)';
-            showAlert(`❌ ${weekdayName} không được phép điểm danh. Chỉ được thứ 2, 4, 6.`, 'error');
+            dateError.style.display = 'block';
+            showAlert(`❌ ${weekday} không được phép điểm danh`, 'error');
+            return;
         }
+
+        dateError.style.display = 'none';
+        attendanceDate.style.borderColor = 'var(--success)';
+        startBtn.disabled = false;
     }
 
-    // Update shift selection
     function updateShiftSelection() {
-        const shiftId = shiftSelect.value;
-        const shiftNames = {
-            '1': 'Ca 1 (06:00 - 09:00)',
-            '2': 'Ca 2 (09:00 - 12:00)',
-            '3': 'Ca 3 (13:00 - 16:00)',
-            '4': 'Ca 4 (16:00 - 19:00)'
+        const map = {
+            1: 'Ca 1 (06:00 - 09:00)',
+            2: 'Ca 2 (09:00 - 12:00)',
+            3: 'Ca 3 (13:00 - 16:00)',
+            4: 'Ca 4 (16:00 - 19:00)'
         };
-        selectedShiftText.textContent = shiftNames[shiftId];
+        selectedShiftText.textContent = map[shiftSelect.value] || '-';
     }
 
-    // Set default date to today (if allowed) or next allowed day
     function setDefaultDate() {
         const today = new Date();
-        let targetDate = today;
-
-        // Find next allowed day
         for (let i = 0; i < 7; i++) {
-            const checkDate = new Date(today);
-            checkDate.setDate(today.getDate() + i);
-            if (allowedWeekdays.includes(checkDate.getDay())) {
-                targetDate = checkDate;
+            const d = new Date(today);
+            d.setDate(today.getDate() + i);
+            if (allowedWeekdays.includes(d.getDay())) {
+                attendanceDate.value = d.toISOString().split('T')[0];
                 break;
             }
         }
-
-        attendanceDate.value = targetDate.toISOString().split('T')[0];
         updateDateSelection();
     }
 
-    // Start camera
+    /* ===================== CAMERA ===================== */
     async function startCamera() {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480 }
-            });
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
             video.srcObject = stream;
-
-            video.addEventListener('loadedmetadata', () => {
+            video.onloadedmetadata = () => {
                 overlay.width = video.videoWidth;
                 overlay.height = video.videoHeight;
-            });
-
-            showAlert('Camera đã sẵn sàng! Chọn ngày và ca trực rồi bắt đầu điểm danh.', 'success');
-        } catch (error) {
-            console.error('Camera error:', error);
-            showAlert('Không thể truy cập camera!', 'error');
+            };
+            showAlert('📷 Camera sẵn sàng', 'success');
+        } catch {
+            showAlert('❌ Không thể mở camera', 'error');
         }
     }
 
-    // Draw bounding box with label
+    /* ===================== DRAW ===================== */
     function drawFaceBox(face) {
         const ctx = overlay.getContext('2d');
-        const { top, right, bottom, left, name, confidence, status } = face;
+        const { top, left, right, bottom, name, confidence, status } = face;
+        const colorMap = {
+            success: '#10b981',
+            already_marked: '#3b82f6',
+            unknown: '#ef4444'
+        };
 
-        const width = right - left;
-        const height = bottom - top;
-
-        // Choose color based on status
-        let color = '#f59e0b'; // Orange for unknown
-        if (status === 'success') color = '#10b981'; // Green for success
-        else if (status === 'already_marked') color = '#3b82f6'; // Blue for duplicate
-
-        // Draw rectangle
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = colorMap[status] || '#f59e0b';
         ctx.lineWidth = 3;
-        ctx.strokeRect(left, top, width, height);
+        ctx.strokeRect(left, top, right - left, bottom - top);
 
-        // Draw label background
-        const label = name !== 'Unknown'
-            ? `${name} (${(confidence * 100).toFixed(0)}%)`
-            : 'Không nhận diện';
+        const label = name === 'Unknown'
+            ? 'Không nhận diện được'
+            : `${name} (${Math.round(confidence * 100)}%)`;
 
-        ctx.font = 'bold 14px Inter, sans-serif';
-        const textWidth = ctx.measureText(label).width;
-
-        ctx.fillStyle = color;
-        ctx.fillRect(left, top - 25, textWidth + 16, 25);
-
-        // Draw label text
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(label, left + 8, top - 8);
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.fillRect(left, top - 24, ctx.measureText(label).width + 12, 22);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(label, left + 6, top - 8);
     }
 
-    // Add result to sidebar
     function addResult(face) {
-        const { name, status, message, confidence } = face;
-
-        const resultDiv = document.createElement('div');
-        resultDiv.className = `result-item ${status}`;
-
-        const now = new Date().toLocaleTimeString('vi-VN');
-        const dateStr = attendanceDate.value;
-        const shiftName = selectedShiftText.textContent;
-
-        let icon = '❓';
-        if (status === 'success') icon = '✅';
-        else if (status === 'already_marked') icon = '⚠️';
-        else if (status === 'unknown') icon = '❌';
-
-        resultDiv.innerHTML = `
-            <div class="result-name">${icon} ${name}</div>
-            <div class="result-time">⏰ ${now} | 📅 ${dateStr}</div>
-            <div class="result-status">${message}</div>
-            ${confidence > 0 ? `<div style="color: var(--text-muted); font-size: 0.85rem;">Độ tin cậy: ${(confidence * 100).toFixed(1)}%</div>` : ''}
-        `;
-
-        // Add to top of results
-        if (resultsContainer.firstChild && resultsContainer.firstChild.tagName !== 'P') {
-            resultsContainer.insertBefore(resultDiv, resultsContainer.firstChild);
-        } else {
-            resultsContainer.innerHTML = '';
-            resultsContainer.appendChild(resultDiv);
-        }
-
-        // Keep only last 15 results
-        while (resultsContainer.children.length > 15) {
+        const div = document.createElement('div');
+        div.className = `result-item ${face.status}`;
+        div.innerHTML = `
+        <div>${face.status === 'success' ? '✅' : '❌'} ${face.name}</div>
+        <div>⏰ ${new Date().toLocaleTimeString('vi-VN')}</div>
+        <div>${face.message}</div>
+        ${face.confidence ? `<small>Độ tin cậy: ${(face.confidence * 100).toFixed(1)}%</small>` : ''}
+    `;
+        resultsContainer.prepend(div);
+        while (resultsContainer.children.length > 15)
             resultsContainer.removeChild(resultsContainer.lastChild);
-        }
     }
 
-    // Capture and send frame to backend
+    /* ===================== CORE LOGIC ===================== */
     async function recognizeFrame() {
         if (!isRecognizing) return;
 
-        const dateStr = attendanceDate.value;
-        const shift = parseInt(shiftSelect.value);
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
 
-        if (!dateStr || !shift) {
-            showAlert('Vui lòng chọn ngày và ca trực!', 'error');
-            stopRecognition();
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.8));
+        const formData = new FormData();
+        formData.append('image', blob);
+        formData.append('date', attendanceDate.value);
+        formData.append('shift', shiftSelect.value);
+
+        const res = await fetch('/api/recognize', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
+
+        if (!res.ok) {
+            showAlert(data.detail || 'Lỗi nhận diện', 'error');
             return;
         }
 
-        try {
-            // Create canvas to capture frame
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = video.videoWidth;
-            tempCanvas.height = video.videoHeight;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(video, 0, 0);
-
-            // Convert to blob
-            const blob = await new Promise(resolve => {
-                tempCanvas.toBlob(resolve, 'image/jpeg', 0.8);
-            });
-
-            // Send to backend with date and shift
-            const formData = new FormData();
-            formData.append('image', blob, 'frame.jpg');
-            formData.append('date', dateStr);
-            formData.append('shift', shift);
-
-            const response = await fetch('/api/recognize', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
-
-            // Clear overlay
-            const ctx = overlay.getContext('2d');
-            ctx.clearRect(0, 0, overlay.width, overlay.height);
-
-            if (!response.ok) {
-                showAlert(`❌ ${data.detail}`, 'error');
-                return;
+        data.faces?.forEach(face => {
+            if (!face.confidence || face.confidence < CONFIDENCE_THRESHOLD) {
+                face.status = 'unknown';
+                face.name = 'Unknown';
+                face.message = 'Độ tin cậy thấp';
             }
-
-            // Draw boxes for each detected face
-            if (data.faces && data.faces.length > 0) {
-                data.faces.forEach(face => {
-                    drawFaceBox(face);
-                    addResult(face);
-                });
-            }
-
-        } catch (error) {
-            console.error('Recognition error:', error);
-        }
+            drawFaceBox(face);
+            addResult(face);
+        });
     }
 
-    // Start recognition
+    /* ===================== CONTROL ===================== */
     function startRecognition() {
         if (!attendanceDate.value || !isAllowedDate(attendanceDate.value)) {
-            showAlert('Vui lòng chọn ngày hợp lệ (Thứ 2, 4, 6)!', 'error');
+            showAlert('❌ Ngày không hợp lệ', 'error');
             return;
         }
-
         isRecognizing = true;
         startBtn.disabled = true;
         stopBtn.disabled = false;
         attendanceDate.disabled = true;
         shiftSelect.disabled = true;
-
-        showAlert('🎯 Đang điểm danh... Đứng trước camera để nhận diện.', 'info');
-
-        // Recognize every 2 seconds
-        recognitionInterval = setInterval(recognizeFrame, 2000);
+        recognitionInterval = setInterval(recognizeFrame, RECOGNIZE_INTERVAL_MS);
     }
 
-    // Stop recognition
     function stopRecognition() {
         isRecognizing = false;
+        clearInterval(recognitionInterval);
+        overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
         startBtn.disabled = false;
         stopBtn.disabled = true;
         attendanceDate.disabled = false;
         shiftSelect.disabled = false;
-
-        if (recognitionInterval) {
-            clearInterval(recognitionInterval);
-        }
-
-        // Clear overlay
-        const ctx = overlay.getContext('2d');
-        ctx.clearRect(0, 0, overlay.width, overlay.height);
-
-        showAlert('⏸️ Đã dừng điểm danh', 'info');
     }
 
-    // Event listeners
-    startBtn.addEventListener('click', startRecognition);
-    stopBtn.addEventListener('click', stopRecognition);
-    attendanceDate.addEventListener('change', updateDateSelection);
-    shiftSelect.addEventListener('change', updateShiftSelection);
+    /* ===================== INIT ===================== */
+    startBtn.onclick = startRecognition;
+    stopBtn.onclick = stopRecognition;
+    attendanceDate.onchange = updateDateSelection;
+    shiftSelect.onchange = updateShiftSelection;
 
-    // Initialize
     setDefaultDate();
     updateShiftSelection();
     startCamera();
 
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
-        if (recognitionInterval) {
-            clearInterval(recognitionInterval);
-        }
-    });
+    window.onbeforeunload = () => stream?.getTracks().forEach(t => t.stop());
 </script>
 {% endblock %}
