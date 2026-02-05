@@ -4,17 +4,33 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header">📝 Đăng ký người dùng mới (30 ảnh)</div>
+    <div class="card-header">📝 Đăng ký người dùng mới (25 ảnh)</div>
 
     <div id="alertContainer"></div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem;">
         <!-- Camera Preview -->
         <div>
-            <h3 style="margin-bottom: 1rem;">📷 Chụp 30 ảnh khuôn mặt</h3>
-            <div class="video-container">
-                <video id="video" autoplay playsinline></video>
-                <canvas id="canvas"></canvas>
+            <h3 style="margin-bottom: 1rem;">📷 Chụp 25 ảnh khuôn mặt</h3>
+            <div class="video-container" style="position: relative;">
+                <!-- Video & Canvas: Mirrored -->
+                <video id="video" autoplay playsinline style="transform: scaleX(-1);"></video>
+                <canvas id="canvas" style="transform: scaleX(-1);"></canvas>
+
+                <!-- Status Overlay (Not mirrored) -->
+                <div id="statusText" style="
+                    position: absolute; 
+                    top: 20px; 
+                    left: 0; 
+                    width: 100%; 
+                    text-align: center; 
+                    color: white; 
+                    font-weight: bold; 
+                    font-size: 24px; 
+                    text-shadow: 2px 2px 4px #000; 
+                    z-index: 10;
+                    pointer-events: none;
+                "></div>
             </div>
 
             <!-- Progress bar -->
@@ -23,7 +39,7 @@
                     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                 </div>
                 <div class="progress-text">
-                    <span id="captureCount">0</span> / 30 ảnh
+                    <span id="captureCount">0</span> / 25 ảnh
                 </div>
             </div>
 
@@ -31,18 +47,17 @@
             <div id="instructions" class="instructions">
                 <h4>📋 Hướng dẫn chụp ảnh:</h4>
                 <ul>
-                    <li id="step1" class="active">Nhìn thẳng vào camera (5 ảnh)</li>
-                    <li id="step2">Quay mặt sang trái (5 ảnh)</li>
-                    <li id="step3">Quay mặt sang phải (5 ảnh)</li>
-                    <li id="step4">Nghiêng đầu lên (5 ảnh)</li>
-                    <li id="step5">Nghiêng đầu xuống (5 ảnh)</li>
-                    <li id="step6">Các góc độ khác (5 ảnh)</li>
+                    <li id="step1" class="active">1. Nhìn thẳng (5 ảnh)</li>
+                    <li id="step2">2. Quay mặt sang TRÁI (5 ảnh)</li>
+                    <li id="step3">3. Quay mặt sang PHẢI (5 ảnh)</li>
+                    <li id="step4">4. Ngước đầu lên (5 ảnh)</li>
+                    <li id="step5">5. Cúi đầu xuống (5 ảnh)</li>
                 </ul>
             </div>
 
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                <button id="startCaptureBtn" class="btn btn-primary" style="flex: 1;">
-                    ▶️ Bắt đầu chụp tự động
+                <button id="startCaptureBtn" class="btn btn-primary" style="flex: 1;" disabled>
+                    ⏳ Đang tải AI...
                 </button>
                 <button id="stopCaptureBtn" class="btn btn-danger" style="flex: 1;" disabled>
                     ⏸️ Dừng
@@ -72,13 +87,13 @@
                     <label>Ảnh đã chụp</label>
                     <div id="capturedImagesContainer" class="captured-grid">
                         <p style="color: var(--text-muted); font-style: italic; grid-column: span 5;">
-                            Chưa chụp ảnh. Nhấn "Bắt đầu chụp tự động" để bắt đầu.
+                            Chưa chụp ảnh. Nhấn "Bắt đầu" để thực hiện theo hướng dẫn.
                         </p>
                     </div>
                 </div>
 
                 <button type="submit" id="submitBtn" class="btn btn-success" style="width: 100%;" disabled>
-                    ✅ Đăng ký (cần đủ 30 ảnh)
+                    ✅ Đăng ký (cần đủ 25 ảnh)
                 </button>
             </form>
         </div>
@@ -86,6 +101,12 @@
 </div>
 
 <style>
+    /* Mirror logic */
+    /* video,
+    canvas {
+        transform: scaleX(-1);
+    } */
+
     #canvas {
         position: absolute;
         top: 0;
@@ -94,9 +115,9 @@
     }
 
     .progress-container {
-        background: var(--dark-lighter);
         border-radius: 8px;
         padding: 1rem;
+        background: rgba(255, 255, 255, 0.05);
     }
 
     .progress-bar {
@@ -121,7 +142,7 @@
     }
 
     .instructions {
-        background: var(--dark-lighter);
+        background: rgba(255, 255, 255, 0.05);
         border-radius: 8px;
         padding: 1rem;
         margin-top: 1rem;
@@ -143,17 +164,21 @@
         margin-bottom: 0.25rem;
         color: var(--text-muted);
         transition: all 0.3s ease;
+        border-left: 3px solid transparent;
     }
 
     .instructions li.active {
-        background: rgba(99, 102, 241, 0.2);
+        background: rgba(99, 102, 241, 0.1);
         color: var(--primary);
         font-weight: 600;
+        border-left-color: var(--primary);
     }
 
     .instructions li.done {
-        background: rgba(16, 185, 129, 0.2);
+        background: rgba(16, 185, 129, 0.1);
         color: var(--success);
+        border-left-color: var(--success);
+        text-decoration: line-through;
     }
 
     .captured-grid {
@@ -163,7 +188,7 @@
         max-height: 300px;
         overflow-y: auto;
         padding: 0.5rem;
-        background: var(--dark-lighter);
+        background: rgba(255, 255, 255, 0.05);
         border-radius: 8px;
     }
 
@@ -199,6 +224,7 @@
 <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
+    const statusText = document.getElementById('statusText');
     const startCaptureBtn = document.getElementById('startCaptureBtn');
     const stopCaptureBtn = document.getElementById('stopCaptureBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -209,212 +235,309 @@
     const progressFill = document.getElementById('progressFill');
     const captureCountSpan = document.getElementById('captureCount');
 
+    // Configuration
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+    const TARGET_IMAGES = 25;
+    const CAPTURE_COOLDOWN = 800; // ms
+
+    // State
     let stream = null;
     let capturedImages = [];
-    let captureInterval = null;
     let isCapturing = false;
-    const TARGET_IMAGES = 30;
-    const CAPTURE_INTERVAL_MS = 500; // Capture every 500ms
+    let isModelLoaded = false;
+    let detectionsLoop = null;
+    let lastCaptureTime = 0;
 
-    // Show alert message
+    const STEPS = [
+        { id: 'step1', name: 'straight', instruction: 'Giữ đầu thẳng', range: [0, 5] },
+        { id: 'step2', name: 'left', instruction: 'Quay mặt sang TRÁI (vai trái)', range: [5, 10] },
+        { id: 'step3', name: 'right', instruction: 'Quay mặt sang PHẢI (vai phải)', range: [10, 15] },
+        { id: 'step4', name: 'up', instruction: 'Ngước đầu lên', range: [15, 20] },
+        { id: 'step5', name: 'down', instruction: 'Cúi đầu xuống', range: [20, 25] }
+    ];
+
     function showAlert(message, type = 'info') {
         const alertDiv = document.createElement('div');
         alertDiv.className = `alert alert-${type}`;
         alertDiv.textContent = message;
         alertContainer.innerHTML = '';
         alertContainer.appendChild(alertDiv);
-
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 5000);
+        setTimeout(() => alertDiv.remove(), 5000);
     }
 
-    // Update progress
-    function updateProgress() {
-        const percent = (capturedImages.length / TARGET_IMAGES) * 100;
-        progressFill.style.width = `${percent}%`;
-        captureCountSpan.textContent = capturedImages.length;
+    async function loadModels() {
+        startCaptureBtn.disabled = true;
+        startCaptureBtn.textContent = '⏳ Đang tải AI...';
+        setStatus("⏳ Đang tải mô hình AI...", "white");
+        try {
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+            ]);
+            isModelLoaded = true;
+            startCaptureBtn.disabled = false;
+            startCaptureBtn.textContent = '▶️ Bắt đầu chụp tự động';
+            setStatus("✅ AI Sẵn sàng! Nhấn Bắt đầu.", "#10b981");
+        } catch (error) {
+            console.error(error);
+            setStatus("❌ Lỗi tải AI", "red");
+        }
+    }
 
-        // Update step indicators
-        const stepsPerPhase = 5;
-        const currentPhase = Math.floor(capturedImages.length / stepsPerPhase) + 1;
+    function getHeadPose(landmarks) {
+        const nose = landmarks.getNose()[3];
+        const jaw = landmarks.getJawOutline();
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+        const mouth = landmarks.getMouth();
 
-        for (let i = 1; i <= 6; i++) {
-            const step = document.getElementById(`step${i}`);
-            step.classList.remove('active', 'done');
+        // Yaw Calculation (Raw Video Data)
+        // Note: FaceAPI processes typical Webcam stream as Raw (non-mirrored)
+        // Turn LEFT -> Nose moves to Image Right -> Yaw Ratio Increases
+        // Turn RIGHT -> Nose moves to Image Left -> Yaw Ratio Decreases
 
-            if (i < currentPhase) {
-                step.classList.add('done');
-            } else if (i === currentPhase && capturedImages.length < TARGET_IMAGES) {
-                step.classList.add('active');
+        const jawLeft = jaw[0];
+        const jawRight = jaw[16];
+        const faceWidth = jawRight.x - jawLeft.x;
+        const noseDistToImageLeft = nose.x - jawLeft.x;
+        const yawRatio = noseDistToImageLeft / faceWidth;
+
+        // Thresholds
+        // Center ~ 0.5
+        // < 0.45: Nose is left -> User turned RIGHT
+        // > 0.55: Nose is right -> User turned LEFT
+
+        let yaw = 'center';
+        if (yawRatio < 0.45) yaw = 'user_right';
+        else if (yawRatio > 0.55) yaw = 'user_left';
+
+        // Pitch Calculation
+        const avgEyeY = (leftEye.reduce((a, b) => a + b.y, 0) + rightEye.reduce((a, b) => a + b.y, 0)) / 12;
+        const avgMouthY = mouth.reduce((a, b) => a + b.y, 0) / 20;
+        const noseY = nose.y;
+
+        const faceHeight = avgMouthY - avgEyeY;
+        const noseDist = noseY - avgEyeY;
+        const pitchRatio = noseDist / faceHeight;
+
+        let pitch = 'center';
+        if (pitchRatio < 0.35) pitch = 'up';
+        else if (pitchRatio > 0.65) pitch = 'down';
+
+        return { yaw, pitch };
+    }
+
+    async function onPlay() {
+        if (video.paused || video.ended || !isModelLoaded) return setTimeout(() => onPlay(), 100);
+
+        const displaySize = { width: video.videoWidth, height: video.videoHeight };
+        faceapi.matchDimensions(canvas, displaySize);
+
+        detectionsLoop = setInterval(async () => {
+            const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (detections) {
+                const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                faceapi.draw.drawFaceLandmarks(canvas, resizedDetections, {
+                    drawLines: true,
+                    color: 'rgba(0, 255, 255, 0.5)'
+                });
+
+                if (isCapturing && capturedImages.length < TARGET_IMAGES) {
+                    processValidation(resizedDetections);
+                }
+            } else if (isCapturing) {
+                setStatus("❌ Không tìm thấy khuôn mặt", "red");
+            }
+        }, 100);
+    }
+
+    function setStatus(text, color) {
+        statusText.textContent = text;
+        statusText.style.color = color;
+    }
+
+    function processValidation(detection) {
+        const count = capturedImages.length;
+        let currentStep = STEPS[0];
+        for (const step of STEPS) {
+            if (count >= step.range[0] && count < step.range[1]) {
+                currentStep = step;
+                break;
             }
         }
 
-        // Enable submit button when we have enough images
-        if (capturedImages.length >= TARGET_IMAGES) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = '✅ Đăng ký';
-            stopCapture();
-            showAlert(`✅ Đã chụp đủ ${TARGET_IMAGES} ảnh! Nhấn Đăng ký để hoàn tất.`, 'success');
+        const pose = getHeadPose(detection.landmarks);
+        let isValid = false;
+        let message = currentStep.instruction;
+
+        switch (currentStep.name) {
+            case 'straight':
+                if (pose.yaw === 'center' && pose.pitch === 'center') isValid = true;
+                else message = "Hãy nhìn thẳng!";
+                break;
+            case 'left':
+                if (pose.yaw === 'user_left') isValid = true;
+                else message = "Quay mặt sang TRÁI nữa";
+                break;
+            case 'right':
+                if (pose.yaw === 'user_right') isValid = true;
+                else message = "Quay mặt sang PHẢI nữa";
+                break;
+            case 'up':
+                if (pose.pitch === 'up') isValid = true;
+                else message = "Ngước lên nữa";
+                break;
+            case 'down':
+                if (pose.pitch === 'down') isValid = true;
+                else message = "Cúi xuống nữa";
+                break;
+        }
+
+        if (isValid) {
+            setStatus("✅ OK! Giữ nguyên...", "#10b981");
+            const now = Date.now();
+            if (now - lastCaptureTime > CAPTURE_COOLDOWN) {
+                captureImage();
+                lastCaptureTime = now;
+            }
+        } else {
+            setStatus("⚠️ " + message, "#f59e0b");
+        }
+        highlightStep(currentStep.id);
+    }
+
+    function highlightStep(stepId) {
+        STEPS.forEach(s => {
+            const el = document.getElementById(s.id);
+            if (el.id === stepId) {
+                el.classList.add('active');
+                el.classList.remove('done');
+            } else {
+                el.classList.remove('active');
+                if (capturedImages.length >= s.range[1]) el.classList.add('done');
+            }
+        });
+    }
+
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+            video.srcObject = stream;
+            video.addEventListener('play', onPlay);
+            loadModels();
+        } catch (error) {
+            setStatus("Lỗi Camera", "red");
         }
     }
 
-    // Add captured image to grid
+    function captureImage() {
+        if (capturedImages.length >= TARGET_IMAGES) return;
+        const captureCanvas = document.createElement('canvas');
+        captureCanvas.width = video.videoWidth;
+        captureCanvas.height = video.videoHeight;
+        const ctx = captureCanvas.getContext('2d');
+        ctx.drawImage(video, 0, 0);
+        const dataUrl = captureCanvas.toDataURL('image/jpeg', 0.85);
+
+        capturedImages.push(dataUrl);
+        addCapturedImage(dataUrl, true);
+        updateProgress();
+
+        if (capturedImages.length >= TARGET_IMAGES) finishCapture();
+    }
+
     function addCapturedImage(dataUrl, isValid) {
         const img = document.createElement('img');
         img.src = dataUrl;
         img.className = isValid ? 'valid' : 'invalid';
-
-        // Remove placeholder text
-        const placeholder = capturedImagesContainer.querySelector('p');
-        if (placeholder) placeholder.remove();
-
+        if (capturedImagesContainer.querySelector('p')) capturedImagesContainer.querySelector('p').remove();
         capturedImagesContainer.appendChild(img);
+        capturedImagesContainer.scrollTop = capturedImagesContainer.scrollHeight;
     }
 
-    // Start camera
-    async function startCamera() {
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480 }
-            });
-            video.srcObject = stream;
-
-            video.addEventListener('loadedmetadata', () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-            });
-
-            showAlert('Camera đã sẵn sàng! Nhấn "Bắt đầu chụp tự động" để chụp 30 ảnh.', 'success');
-        } catch (error) {
-            console.error('Camera error:', error);
-            showAlert('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.', 'error');
-        }
+    function updateProgress() {
+        const percent = (capturedImages.length / TARGET_IMAGES) * 100;
+        progressFill.style.width = `${percent}%`;
+        captureCountSpan.textContent = capturedImages.length;
     }
 
-    // Capture single image
-    function captureImage() {
-        if (capturedImages.length >= TARGET_IMAGES) {
-            stopCapture();
-            return;
-        }
-
+    function finishCapture() {
+        isCapturing = false;
+        startCaptureBtn.disabled = true;
+        stopCaptureBtn.disabled = true;
+        submitBtn.disabled = false;
+        setStatus("🎉 Xong! Hãy bấm Đăng ký.", "#10b981");
+        if (detectionsLoop) clearInterval(detectionsLoop);
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        capturedImages.push(dataUrl);
-        addCapturedImage(dataUrl, true);
-        updateProgress();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Start automatic capture
     function startCapture() {
-        if (capturedImages.length >= TARGET_IMAGES) {
-            showAlert('Đã chụp đủ ảnh!', 'info');
-            return;
-        }
-
+        if (!isModelLoaded || capturedImages.length >= TARGET_IMAGES) return;
         isCapturing = true;
         startCaptureBtn.disabled = true;
         stopCaptureBtn.disabled = false;
-
-        showAlert('🎬 Đang chụp tự động... Hãy quay mặt theo hướng dẫn!', 'info');
-
-        captureInterval = setInterval(captureImage, CAPTURE_INTERVAL_MS);
+        setStatus("🎬 Bắt đầu...", "white");
     }
 
-    // Stop capture
     function stopCapture() {
         isCapturing = false;
         startCaptureBtn.disabled = false;
         stopCaptureBtn.disabled = true;
-
-        if (captureInterval) {
-            clearInterval(captureInterval);
-            captureInterval = null;
-        }
+        setStatus("Đã dừng", "white");
     }
 
-    // Reset all captured images
     function resetCapture() {
         stopCapture();
         capturedImages = [];
-        capturedImagesContainer.innerHTML = '<p style="color: var(--text-muted); font-style: italic; grid-column: span 5;">Chưa chụp ảnh. Nhấn "Bắt đầu chụp tự động" để bắt đầu.</p>';
+        capturedImagesContainer.innerHTML = '<p style="color: var(--text-muted); font-style: italic; grid-column: span 5;">Chưa chụp ảnh nào.</p>';
         updateProgress();
+        highlightStep('step1');
         submitBtn.disabled = true;
-        submitBtn.textContent = '✅ Đăng ký (cần đủ 30 ảnh)';
-        showAlert('Đã xóa tất cả ảnh. Sẵn sàng chụp lại.', 'info');
+        setStatus("Sẵn sàng", "white");
     }
 
-    // Event listeners
     startCaptureBtn.addEventListener('click', startCapture);
     stopCaptureBtn.addEventListener('click', stopCapture);
     resetBtn.addEventListener('click', resetCapture);
 
-    // Submit registration
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-
-        if (capturedImages.length < 5) {
-            showAlert('Vui lòng chụp ít nhất 5 ảnh!', 'error');
-            return;
-        }
-
+        if (capturedImages.length < TARGET_IMAGES) return showAlert('Chưa đủ ảnh', 'error');
         const name = document.getElementById('name').value;
         const userId = document.getElementById('userId').value;
-
-        // Disable button and show loading
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; margin: 0 auto;"></div> Đang xử lý...';
+        submitBtn.innerHTML = '⏳ Đang gửi...';
 
         try {
-            // Create form data with all images as JSON
             const formData = new FormData();
             formData.append('name', name);
             formData.append('user_id', userId);
             formData.append('images', JSON.stringify(capturedImages));
-
-            const response = await fetch('/api/register', {
-                method: 'POST',
-                body: formData
-            });
-
+            const response = await fetch('/api/register', { method: 'POST', body: formData });
             const data = await response.json();
-
             if (response.ok) {
-                showAlert(`✅ ${data.message}`, 'success');
-
-                // Reset form
-                registerForm.reset();
-                resetCapture();
-
-                // Redirect to dashboard after 2 seconds
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 2000);
+                showAlert('✅ Thành công!', 'success');
+                setTimeout(() => window.location.href = '/', 1500);
             } else {
-                showAlert(`❌ Lỗi: ${data.detail || 'Đăng ký thất bại'}`, 'error');
+                showAlert('❌ ' + (data.detail || 'Lỗi'), 'error');
                 submitBtn.disabled = false;
-                submitBtn.textContent = '✅ Đăng ký';
+                submitBtn.textContent = '✅ Đăng ký again';
             }
-        } catch (error) {
-            console.error('Registration error:', error);
-            showAlert('❌ Lỗi kết nối. Vui lòng thử lại!', 'error');
+        } catch (e) {
+            showAlert('Lỗi kết nối', 'error');
             submitBtn.disabled = false;
-            submitBtn.textContent = '✅ Đăng ký';
+            submitBtn.textContent = '✅ Đăng ký again';
         }
     });
 
-    // Start camera on page load
     startCamera();
-
-    // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
-        stopCapture();
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        if (detectionsLoop) clearInterval(detectionsLoop);
     });
 </script>
 {% endblock %}
