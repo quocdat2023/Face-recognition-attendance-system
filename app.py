@@ -1,3 +1,9 @@
+"""
+Face Recognition System
+Combines Flask (frontend) and FastAPI (backend API) in a single application
+Uses face_recognition library for encoding/matching, face-api.js for UI visualization
+"""
+
 from flask import Flask, render_template, send_from_directory
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,17 +23,16 @@ from datetime import datetime
 from bson import ObjectId
 import os
 import json
-from liveness_analysis import LivenessDetector
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
+MONGODB_URI = "mongodb://localhost:27017/"
 DATABASE_NAME = "face_recognition_db"
 USERS_COLLECTION = "users"
 ATTENDANCE_COLLECTION = "attendance"
-FACE_MATCH_THRESHOLD = 0.7 # Lower is stricter
+FACE_MATCH_THRESHOLD = 0.6  # Lower is stricter
 NUM_IMAGES_FOR_REGISTRATION = 30  # Number of images to capture for registration
 
 # Shift configuration
@@ -223,11 +228,6 @@ def check_duplicate_attendance(user_id, date_str, shift):
     return existing is not None
 
 # ============================================================================
-# LIVENESS DETECTOR INSTANCE
-# ============================================================================
-liveness_detector = LivenessDetector()
-
-# ============================================================================
 # API ENDPOINTS
 # ============================================================================
 
@@ -344,47 +344,6 @@ async def recognize_faces(
         
         # Get face encodings
         face_encodings = face_recognition.face_encodings(rgb_img, face_locations)
-
-        # ------------------------------------------------------------------------
-        # SECURITY / LIVENESS CHECKS
-        # ------------------------------------------------------------------------
-        
-        # 1. Image Blur Check (Anti-Focus/Screen Attack)
-        is_clear, blur_score, blur_msg = liveness_detector.check_image_quality(img)
-        if not is_clear:
-             # Fail heavily if image is too blurry
-            return JSONResponse(status_code=400, content={
-                "status": "spoof_detected",
-                "reason": "blur_check_failed",
-                "message": f"Ảnh quá mờ. Vui lòng giữ camera ổn định. (Score: {blur_score:.2f})",
-                "timestamp": datetime.now().isoformat()
-            })
-
-        # 2. Moiré Pattern Check (Anti-Screen Attack)
-        # Note: Thresholds in liveness_analysis might need tuning for your specific camera
-        is_natural, moire_score, moire_msg = liveness_detector.detect_moire_pattern(img)
-        # We can be soft or hard here. For now, let's log it or soft-fail.
-        # If score is very high (e.g., > 100 in our simple heuristic), it might be a screen.
-        # For this implementation, we will pass the score to the frontend or reject if critical.
-        
-        # 3. Face Reflection / Glare Check (Anti-Screen/Photo Attack)
-        # Check the first face found for glare properties
-        if len(face_locations) > 0:
-            top, right, bottom, left = face_locations[0]
-            face_box = (top, right, bottom, left)
-            is_skin_reflection, glare_ratio, glare_msg = liveness_detector.check_face_reflection(img, face_box)
-            
-            if not is_skin_reflection:
-                 return JSONResponse(status_code=400, content={
-                    "status": "spoof_detected",
-                    "reason": "glare_check_failed",
-                    "message": f"Phát hiện phản chiếu bất thường (màn hình/ảnh chụp). (Ratio: {glare_ratio:.2f})",
-                    "timestamp": datetime.now().isoformat()
-                })
-        
-        # ------------------------------------------------------------------------
-        # END SECURITY CHECKS
-        # ------------------------------------------------------------------------
         
         # Match each face
         recognized_faces = []
