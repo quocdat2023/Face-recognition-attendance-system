@@ -4,14 +4,14 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header">📝 Đăng ký người dùng mới (25 ảnh)</div>
+    <div class="card-header">📝 Đăng ký người dùng mới (10 ảnh)</div>
 
     <div id="alertContainer"></div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem;">
         <!-- Camera Preview -->
         <div>
-            <h3 style="margin-bottom: 1rem;">📷 Chụp 25 ảnh khuôn mặt</h3>
+            <h3 style="margin-bottom: 1rem;">📷 Chụp 10 ảnh khuôn mặt</h3>
             <div class="video-container" style="position: relative;">
                 <!-- Video & Canvas: Mirrored -->
                 <video id="video" autoplay playsinline style="transform: scaleX(-1);"></video>
@@ -39,19 +39,14 @@
                     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
                 </div>
                 <div class="progress-text">
-                    <span id="captureCount">0</span> / 25 ảnh
+                    <span id="captureCount">0</span> / 10 ảnh
                 </div>
             </div>
 
             <!-- Capture instructions -->
             <div id="instructions" class="instructions">
                 <h4>📋 Hướng dẫn chụp ảnh:</h4>
-                <ul>
-                    <li id="step1" class="active">1. Nhìn thẳng (5 ảnh)</li>
-                    <li id="step2">2. Quay mặt sang TRÁI (5 ảnh)</li>
-                    <li id="step3">3. Quay mặt sang PHẢI (5 ảnh)</li>
-                    <li id="step4">4. Ngước đầu lên (5 ảnh)</li>
-                    <li id="step5">5. Cúi đầu xuống (5 ảnh)</li>
+                <li id="step1" class="active">1. Nhìn thẳng vào camera (10 ảnh)</li>
                 </ul>
             </div>
 
@@ -93,7 +88,7 @@
                 </div>
 
                 <button type="submit" id="submitBtn" class="btn btn-success" style="width: 100%;" disabled>
-                    ✅ Đăng ký (cần đủ 25 ảnh)
+                    ✅ Đăng ký (cần đủ 10 ảnh)
                 </button>
             </form>
         </div>
@@ -237,7 +232,7 @@
 
     // Configuration
     const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-    const TARGET_IMAGES = 25;
+    const TARGET_IMAGES = 10;
     const CAPTURE_COOLDOWN = 800; // ms
 
     // State
@@ -249,11 +244,7 @@
     let lastCaptureTime = 0;
 
     const STEPS = [
-        { id: 'step1', name: 'straight', instruction: 'Giữ đầu thẳng', range: [0, 5] },
-        { id: 'step2', name: 'left', instruction: 'Quay mặt sang TRÁI (vai trái)', range: [5, 10] },
-        { id: 'step3', name: 'right', instruction: 'Quay mặt sang PHẢI (vai phải)', range: [10, 15] },
-        { id: 'step4', name: 'up', instruction: 'Ngước đầu lên', range: [15, 20] },
-        { id: 'step5', name: 'down', instruction: 'Cúi đầu xuống', range: [20, 25] }
+        { id: 'step1', name: 'straight', instruction: 'Giữ đầu thẳng và nhìn vào camera', range: [0, 10] }
     ];
 
     function showAlert(message, type = 'info') {
@@ -373,27 +364,11 @@
         let isValid = false;
         let message = currentStep.instruction;
 
-        switch (currentStep.name) {
-            case 'straight':
-                if (pose.yaw === 'center' && pose.pitch === 'center') isValid = true;
-                else message = "Hãy nhìn thẳng!";
-                break;
-            case 'left':
-                if (pose.yaw === 'user_left') isValid = true;
-                else message = "Quay mặt sang TRÁI nữa";
-                break;
-            case 'right':
-                if (pose.yaw === 'user_right') isValid = true;
-                else message = "Quay mặt sang PHẢI nữa";
-                break;
-            case 'up':
-                if (pose.pitch === 'up') isValid = true;
-                else message = "Ngước lên nữa";
-                break;
-            case 'down':
-                if (pose.pitch === 'down') isValid = true;
-                else message = "Cúi xuống nữa";
-                break;
+        // Check if looking straight
+        if (pose.yaw === 'center' && pose.pitch === 'center') {
+            isValid = true;
+        } else {
+            message = "Hãy nhìn thẳng vào camera!";
         }
 
         if (isValid) {

@@ -1,254 +1,128 @@
-# 👤 Face Recognition System
+# 👤 Face Recognition Attendance System
 
-Hệ thống nhận diện khuôn mặt và điểm danh tự động sử dụng Python, MongoDB, FastAPI, Flask và face-api.js.
+Hệ thống nhận diện khuôn mặt và điểm danh tự động thông minh, tích hợp lưu trữ ảnh trên Cloudinary và cơ sở dữ liệu MongoDB.
 
-## ✨ Tính năng
+## ✨ Tính năng nổi bật
 
-- 📝 **Đăng ký người dùng**: Chụp ảnh khuôn mặt và lưu thông tin
-- 🎯 **Nhận diện real-time**: Nhận diện khuôn mặt từ camera trực tiếp
-- ✅ **Điểm danh tự động**: Tự động ghi nhận khi phát hiện khuôn mặt
-- 📊 **Thống kê**: Xem lịch sử điểm danh và thống kê
-- 🎨 **Giao diện đẹp**: Dark mode với hiệu ứng glassmorphism
+- 📝 **Đăng ký thông minh**: Thu thập 10 ảnh mẫu nhìn thẳng, tự động tạo vector nhận diện.
+- ☁️ **Lưu trữ Cloudinary**: Tự động upload ảnh đại diện người dùng và ảnh chụp lúc điểm danh lên Cloud (không tốn dung lượng server).
+- 🎯 **Nhận diện chính xác**: Sử dụng mô hình Deep Learning (face_recognition & dlib) để nhận diện với độ chính xác cao.
+- ✅ **Điểm danh theo ca**: Hỗ trợ 4 ca làm việc/ngày, kiểm tra trùng lặp, chỉ cho phép điểm danh vào Thứ 2, 4, 6.
+- 👥 **Quản lý người dùng**: Xem danh sách, xem ảnh đại diện phóng to, xóa người dùng.
+- 📊 **Lịch sử & Thống kê**: Xem lịch sử điểm danh kèm ảnh bằng chứng, thống kê theo ca, lọc theo ngày/ca.
+- 🗑️ **Quản lý dữ liệu**: Xóa từng bản ghi hoặc xóa toàn bộ lịch sử điểm danh.
+- 🎨 **Giao diện hiện đại**: Thiết kế Dark Mode, Responsive, hiệu ứng mượt mà.
 
-## 🏗️ Kiến trúc
+## 🏗️ Kiến trúc hệ thống
 
-- **Backend**: Python với Flask (frontend) + FastAPI (API)
-- **Face Recognition**: Thư viện `face_recognition` (dlib) cho mã hóa khuôn mặt
-- **Visualization**: face-api.js để vẽ khung và nhãn trên video
-- **Database**: MongoDB để lưu trữ dữ liệu người dùng và face encodings
-- **Frontend**: HTML/CSS với JavaScript (embedded)
+- **Backend**: Python (Flask + FastAPI).
+- **Database**: MongoDB (Lưu thông tin user, vector khuôn mặt, lịch sử điểm danh).
+- **Storage**: Cloudinary (Lưu ảnh đăng ký và ảnh điểm danh).
+- **AI/ML**: `face_recognition` (Python) cho xử lý backend, `face-api.js` cho trải nghiệm realtime frontend.
+- **Frontend**: HTML5, CSS3, JavaScript.
 
-### Luồng hoạt động
-
-**Đăng ký:**
-1. Client chụp ảnh từ camera
-2. Gửi ảnh lên backend
-3. Backend trích xuất face encoding (128-D vector)
-4. Lưu vào MongoDB
-
-**Nhận diện:**
-1. Client gửi frame video lên backend mỗi giây
-2. Backend phát hiện khuôn mặt và so khớp với database
-3. Trả về vị trí khuôn mặt + tên người
-4. Frontend dùng face-api.js vẽ khung và label
-5. Tự động ghi điểm danh
-
-## 📋 Yêu cầu
+## 📋 Yêu cầu hệ thống
 
 - Python 3.8+
-- MongoDB (local hoặc Atlas)
+- MongoDB (Local hoặc Atlas)
+- Tài khoản Cloudinary (Miễn phí)
 - Webcam
-- CMake (để cài đặt dlib)
-- Visual Studio Build Tools (Windows)
+- Visual Studio Build Tools (để cài đặt thư viện dlib trên Windows)
 
-## 🚀 Cài đặt
+## 🚀 Cài đặt & Chạy ứng dụng
 
-### 1. Clone hoặc tải project
-
+### 1. Clone project
 ```bash
-cd c:\Users\quocd\Videos\face
+git clone <repository-url>
+cd Face-recognition-attendance-system
 ```
 
-### 2. Cài đặt MongoDB
-
-**Option A: MongoDB Local**
-- Tải và cài đặt MongoDB Community Server từ https://www.mongodb.com/try/download/community
-- Chạy MongoDB service
-
-**Option B: MongoDB Atlas (Cloud)**
-- Đăng ký tài khoản miễn phí tại https://www.mongodb.com/cloud/atlas
-- Tạo cluster và lấy connection string
-- Cập nhật `MONGODB_URI` trong `app.py`
-
-### 3. Cài đặt Python dependencies
-
+### 2. Cài đặt Python dependencies
 ```bash
-# Cài đặt CMake (cần cho dlib)
-pip install cmake
-
-# Cài đặt các thư viện
 pip install -r requirements.txt
 ```
+*Lưu ý: Nếu gặp lỗi cài đặt `dlib`, hãy đảm bảo bạn đã cài Visual Studio Build Tools với "Desktop development with C++".*
 
-**Lưu ý cho Windows:**
-- Nếu gặp lỗi khi cài `dlib`, cần cài Visual Studio Build Tools
-- Tải từ: https://visualstudio.microsoft.com/downloads/
-- Chọn "Desktop development with C++"
+### 3. Cấu hình môi trường (.env)
+Tạo file `.env` tại thư mục gốc và điền thông tin cấu hình (xem `.env.example`):
 
-**Nếu gặp lỗi với face_recognition:**
-```bash
-# Cài dlib từ wheel file (dễ hơn)
-pip install https://github.com/jloh02/dlib/releases/download/v19.22/dlib-19.22.99-cp38-cp38-win_amd64.whl
-pip install face-recognition
+```env
+# MongoDB Configuration
+MONGO_URI=mongodb://localhost:27017
+DB_NAME=face_recognition_db
+
+# Cloudinary Configuration (Lấy từ Dashboard của Cloudinary)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-### 4. Cấu hình
-
-Mở file `app.py` và cập nhật cấu hình nếu cần:
-
-```python
-MONGODB_URI = "mongodb://localhost:27017/"  # Hoặc MongoDB Atlas URI
-DATABASE_NAME = "face_recognition_db"
-FACE_MATCH_THRESHOLD = 0.6  # Ngưỡng nhận diện (thấp hơn = nghiêm ngặt hơn)
-```
-
-## 🎮 Chạy ứng dụng
-
+### 4. Chạy ứng dụng
 ```bash
 python app.py
 ```
-
-Ứng dụng sẽ chạy tại:
-- **Frontend**: http://localhost:5000
-- **API Docs**: http://localhost:5000/api/docs
+Hệ thống sẽ khởi động tại: **http://localhost:5000**
 
 ## 📖 Hướng dẫn sử dụng
 
-### 1. Đăng ký người dùng mới
+### 1. Đăng ký người dùng (Register)
+- Truy cập menu **Đăng ký**.
+- Nhập **Họ tên** và **Mã số**.
+- Hệ thống yêu cầu chụp **10 ảnh** nhìn thẳng vào camera.
+- Nhấn **Bắt đầu** để chụp tự động.
+- Sau khi đủ ảnh, nhấn **Đăng ký**. Ảnh sẽ được upload lên Cloudinary và tạo dữ liệu nhận diện.
 
-1. Truy cập http://localhost:5000/register
-2. Cho phép truy cập camera
-3. Chụp ảnh khuôn mặt (đảm bảo khuôn mặt rõ ràng)
-4. Nhập họ tên và mã số
-5. Nhấn "Đăng ký"
+### 2. Quản lý người dùng (Users)
+- Truy cập menu **Người dùng**.
+- Xem danh sách tất cả nhân viên/sinh viên đã đăng ký.
+- Click vào ảnh đại diện (avatar) để xem ảnh lớn.
+- Nhấn nút **Xóa** để xóa người dùng khỏi hệ thống.
 
-### 2. Nhận diện khuôn mặt
+### 3. Điểm danh (Recognize)
+- Truy cập menu **Nhận diện**.
+- Chọn **Ngày** và **Ca làm việc** (Hệ thống tự động phát hiện Thứ 2, 4, 6).
+- Nhấn **Bắt đầu điểm danh**.
+- Camera sẽ quét và nhận diện khuôn mặt. Nếu trùng khớp, hệ thống sẽ:
+  - Hiển thị tên và độ tin cậy.
+  - Lưu bản ghi điểm danh vào MongoDB.
+  - Chụp ảnh bằng chứng và upload lên Cloudinary.
 
-1. Truy cập http://localhost:5000/recognize
-2. Nhấn "Bắt đầu nhận diện"
-3. Hệ thống sẽ tự động:
-   - Phát hiện khuôn mặt
-   - Nhận diện người dùng
-   - Vẽ khung và tên trên video
-   - Ghi điểm danh
-
-### 3. Xem điểm danh
-
-1. Truy cập http://localhost:5000/attendance
-2. Xem lịch sử điểm danh
-3. Lọc theo ngày
-4. Làm mới dữ liệu
-
-## 🔌 API Endpoints
-
-### POST /api/register
-Đăng ký người dùng mới
-
-**Form Data:**
-- `name`: Họ và tên
-- `user_id`: Mã số
-- `image`: File ảnh
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "user_id": "123"
-}
-```
-
-### POST /api/recognize
-Nhận diện khuôn mặt từ ảnh
-
-**Form Data:**
-- `image`: File ảnh/frame
-
-**Response:**
-```json
-{
-  "faces": [
-    {
-      "top": 100,
-      "right": 300,
-      "bottom": 400,
-      "left": 200,
-      "name": "Nguyen Van A",
-      "confidence": 0.95
-    }
-  ],
-  "timestamp": "2026-01-28T17:30:00"
-}
-```
-
-### GET /api/users
-Lấy danh sách người dùng
-
-### GET /api/attendance
-Lấy lịch sử điểm danh
-
-### GET /api/stats
-Lấy thống kê hệ thống
+### 4. Xem lịch sử (Attendance)
+- Truy cập menu **Điểm danh**.
+- Xem bảng thống kê số lượng điểm danh theo ca.
+- Dưới bảng chi tiết, có thể click vào ảnh thumb để xem ảnh bằng chứng rõ nét.
+- Sử dụng bộ lọc theo Ngày và Ca trực.
+- Sử dụng nút **Xóa tất cả** hoặc xóa từng dòng để quản lý dữ liệu.
 
 ## 🛠️ Cấu trúc thư mục
 
 ```
-face/
-├── app.py                 # Ứng dụng chính (Flask + FastAPI)
-├── requirements.txt       # Python dependencies
-├── templates/            # HTML templates
-│   ├── base.html         # Template cơ sở
-│   ├── index.html        # Dashboard
-│   ├── register.html     # Trang đăng ký
-│   ├── recognize.html    # Trang nhận diện
-│   └── attendance.html   # Trang điểm danh
-└── README.md            # Tài liệu này
+Face-recognition-attendance-system/
+├── app.py                 # Backend chính (Flask + FastAPI)
+├── requirements.txt       # Các thư viện cần thiết
+├── .env                   # Biến môi trường (User tự tạo)
+├── templates/             # Giao diện Frontend
+│   ├── base.html          # Layout chung
+│   ├── index.html         # Trang chủ
+│   ├── register.html      # Trang đăng ký (Logic chụp 10 ảnh)
+│   ├── users.html         # Trang quản lý người dùng
+│   ├── recognize.html     # Trang nhận diện/điểm danh
+│   └── attendance.html    # Trang lịch sử điểm danh
+└── README.md              # Hướng dẫn sử dụng
 ```
 
-## 🎨 Công nghệ sử dụng
+## 🐛 Xử lý sự cố thường gặp
 
-- **Backend Framework**: Flask, FastAPI
-- **Face Recognition**: face_recognition (dlib)
-- **Database**: MongoDB (pymongo)
-- **Frontend**: HTML5, CSS3, JavaScript
-- **Face Visualization**: face-api.js
-- **Image Processing**: OpenCV, Pillow
+1. **Lỗi `ImportError` liên quan đến `bson`**:
+   - Chạy lệnh: `pip uninstall bson pymongo` sau đó `pip install pymongo`.
 
-## ⚙️ Tùy chỉnh
+2. **Không kết nối được MongoDB**:
+   - Kiểm tra xem MongoDB Service đã chạy chưa.
+   - Kiểm tra `MONGO_URI` trong file `.env`.
 
-### Thay đổi ngưỡng nhận diện
-
-Trong `app.py`, điều chỉnh:
-```python
-FACE_MATCH_THRESHOLD = 0.6  # 0.0 - 1.0 (thấp hơn = nghiêm ngặt hơn)
-```
-
-### Thay đổi tần suất nhận diện
-
-Trong `templates/recognize.html`, điều chỉnh:
-```javascript
-recognitionInterval = setInterval(recognizeFrame, 1000); // milliseconds
-```
-
-## 🐛 Xử lý lỗi thường gặp
-
-### Lỗi: "No face detected"
-- Đảm bảo ánh sáng đủ
-- Khuôn mặt nhìn thẳng vào camera
-- Không bị che khuất
-
-### Lỗi: "Cannot connect to MongoDB"
-- Kiểm tra MongoDB service đang chạy
-- Kiểm tra connection string
-- Kiểm tra firewall
-
-### Lỗi: "Camera not accessible"
-- Cho phép truy cập camera trong browser
-- Kiểm tra camera không bị ứng dụng khác sử dụng
-- Sử dụng HTTPS hoặc localhost
+3. **Lỗi upload Cloudinary**:
+   - Kiểm tra lại `CLOUDINARY_CLOUD_NAME`, `API_KEY`, `API_SECRET` trong file `.env`.
+   - Đảm bảo kết nối mạng ổn định.
 
 ## 📝 License
-
-MIT License - Tự do sử dụng cho mục đích cá nhân và thương mại.
-
-## 🤝 Đóng góp
-
-Mọi đóng góp đều được chào đón! Hãy tạo issue hoặc pull request.
-
-## 📧 Liên hệ
-
-Nếu có thắc mắc, vui lòng tạo issue trên GitHub.
-
----
-
-Made with ❤️ using Python, MongoDB, and face-api.js
+Dự án được xây dựng cho mục đích học tập và nghiên cứu.

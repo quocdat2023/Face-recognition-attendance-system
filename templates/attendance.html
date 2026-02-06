@@ -32,6 +32,9 @@
                 <button id="clearFilterBtn" class="btn btn-secondary">
                     ✖️ Xóa bộ lọc
                 </button>
+                <button id="deleteAllBtn" class="btn btn-danger" style="margin-left: auto;">
+                    🗑️ Xóa tất cả
+                </button>
             </div>
         </div>
 
@@ -67,12 +70,14 @@
             <thead>
                 <tr>
                     <th>STT</th>
+                    <th>Ảnh</th>
                     <th>Tên</th>
                     <th>Mã số</th>
                     <th>Ngày</th>
                     <th>Ca trực</th>
                     <th>Thời gian</th>
                     <th>Độ tin cậy</th>
+                    <th>Hành động</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
@@ -83,6 +88,14 @@
             📭 Không có dữ liệu điểm danh
         </div>
     </div>
+</div>
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="modal">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="modalImage">
+    <div id="caption"></div>
 </div>
 
 <style>
@@ -205,6 +218,83 @@
     table {
         margin-top: 1.5rem;
     }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 2px solid var(--primary);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .user-avatar:hover {
+        transform: scale(1.1);
+    }
+
+    .no-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--dark-lighter);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+    }
+
+    /* Modal */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        padding-top: 50px;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.9);
+    }
+
+    .modal-content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 700px;
+        animation: zoom 0.6s;
+    }
+
+    @keyframes zoom {
+        from {
+            transform: scale(0)
+        }
+
+        to {
+            transform: scale(1)
+        }
+    }
+
+    .close {
+        position: absolute;
+        top: 15px;
+        right: 35px;
+        color: #f1f1f1;
+        font-size: 40px;
+        font-weight: bold;
+        transition: 0.3s;
+        cursor: pointer;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: #bbb;
+        text-decoration: none;
+        cursor: pointer;
+    }
 </style>
 {% endblock %}
 
@@ -212,12 +302,34 @@
 <script>
     const refreshBtn = document.getElementById('refreshBtn');
     const clearFilterBtn = document.getElementById('clearFilterBtn');
+    const deleteAllBtn = document.getElementById('deleteAllBtn');
     const filterDate = document.getElementById('filterDate');
     const filterShift = document.getElementById('filterShift');
     const loadingSpinner = document.getElementById('loadingSpinner');
     const tableContainer = document.getElementById('tableContainer');
     const tableBody = document.getElementById('tableBody');
     const emptyMessage = document.getElementById('emptyMessage');
+
+    // Modal elements
+    const modal = document.getElementById("imageModal");
+    const modalImg = document.getElementById("modalImage");
+    const span = document.getElementsByClassName("close")[0];
+
+    span.onclick = function () {
+        modal.style.display = "none";
+    }
+
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    function showImage(src) {
+        if (!src) return;
+        modal.style.display = "block";
+        modalImg.src = src;
+    }
 
     let attendanceData = [];
 
@@ -292,15 +404,25 @@
         emptyMessage.style.display = 'none';
 
         data.forEach((record, index) => {
+            const imageHtml = record.image_url
+                ? `<img src="${record.image_url}" class="user-avatar" onclick="showImage('${record.image_url}')" alt="${record.name}">`
+                : `<div class="no-avatar">📷</div>`;
+
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${index + 1}</td>
+                <td>${imageHtml}</td>
                 <td><strong>${record.name}</strong></td>
                 <td>${record.user_id}</td>
                 <td>${formatDate(record.date)}</td>
                 <td>${getShiftBadge(record.shift, record.shift_name)}</td>
                 <td>${formatTime(record.timestamp)}</td>
                 <td>${getConfidenceBadge(record.confidence || 0)}</td>
+                <td>
+                    <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" onclick="deleteRecord('${record.id}')">
+                        🗑️
+                    </button>
+                </td>
             `;
             tableBody.appendChild(row);
         });
@@ -348,9 +470,47 @@
         loadAttendance();
     }
 
+    // Delete single record
+    async function deleteRecord(id) {
+        if (!confirm('Bạn có chắc chắn muốn xóa bản ghi này?')) return;
+
+        try {
+            const response = await fetch(`/api/attendance/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+                loadAttendance();
+            } else {
+                alert('Không thể xóa bản ghi');
+            }
+        } catch (error) {
+            console.error('Error deleting record:', error);
+            alert('Lỗi khi xóa bản ghi');
+        }
+    }
+
+    // Delete all records
+    async function deleteAllRecords() {
+        if (!confirm('CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ lịch sử điểm danh không? Hành động này không thể hoàn tác!')) return;
+
+        try {
+            const response = await fetch('/api/attendance/all', { method: 'DELETE' });
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(data.message);
+                loadAttendance();
+            } else {
+                alert('Không thể xóa dữ liệu');
+            }
+        } catch (error) {
+            console.error('Error deleting all records:', error);
+            alert('Lỗi khi xóa dữ liệu');
+        }
+    }
+
     // Event listeners
     refreshBtn.addEventListener('click', loadAttendance);
     clearFilterBtn.addEventListener('click', clearFilters);
+    deleteAllBtn.addEventListener('click', deleteAllRecords);
     filterDate.addEventListener('change', loadAttendance);
     filterShift.addEventListener('change', loadAttendance);
 

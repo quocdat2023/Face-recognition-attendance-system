@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Danh sách người dùng - Face Recognition System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">👥 Danh sách người dùng đã đăng ký</div>
+
+    <div id="loadingSpinner" class="spinner"></div>
+
+    <div id="tableContainer" style="display: none;">
+        <div class="table-responsive">
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th>STT</th>
+                        <th>Ảnh</th>
+                        <th>Tên</th>
+                        <th>Mã số</th>
+                        <th>Ngày đăng ký</th>
+                        <th>Số lượng ảnh mẫu</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="emptyMessage" style="text-align: center; padding: 2rem; color: var(--text-muted); display: none;">
+            📭 Chưa có người dùng nào được đăng ký
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="modal">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="modalImage">
+    <div id="caption"></div>
+</div>
+
+<style>
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 2px solid var(--primary);
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .user-avatar:hover {
+        transform: scale(1.1);
+    }
+
+    .no-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--dark-lighter);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    /* Modal */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 2000;
+        padding-top: 50px;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.9);
+    }
+
+    .modal-content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 700px;
+        animation: zoom 0.6s;
+    }
+
+    @keyframes zoom {
+        from {transform:scale(0)}
+        to {transform:scale(1)}
+    }
+
+    .close {
+        position: absolute;
+        top: 15px;
+        right: 35px;
+        color: #f1f1f1;
+        font-size: 40px;
+        font-weight: bold;
+        transition: 0.3s;
+        cursor: pointer;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: #bbb;
+        text-decoration: none;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const tableContainer = document.getElementById('tableContainer');
+    const tableBody = document.getElementById('tableBody');
+    const emptyMessage = document.getElementById('emptyMessage');
+    
+    // Modal elements
+    const modal = document.getElementById("imageModal");
+    const modalImg = document.getElementById("modalImage");
+    const span = document.getElementsByClassName("close")[0];
+
+    span.onclick = function() { 
+        modal.style.display = "none";
+    }
+    
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    function showImage(src, name) {
+        if (!src) return;
+        modal.style.display = "block";
+        modalImg.src = src;
+    }
+
+    // Format date
+    function formatDate(isoString) {
+        if (!isoString) return '-';
+        const date = new Date(isoString);
+        return date.toLocaleDateString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    // Delete user
+    async function deleteUser(userId, name) {
+        if (!confirm(`Bạn có chắc chắn muốn xóa người dùng ${name} (${userId}) không?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                alert('Đã xóa thành công!');
+                loadUsers();
+            } else {
+                alert(`Lỗi: ${result.detail || 'Không thể xóa'}`);
+            }
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            alert('Đã xảy ra lỗi khi xóa người dùng');
+        }
+    }
+
+    // Render table
+    function renderTable(users) {
+        tableBody.innerHTML = '';
+
+        if (users.length === 0) {
+            emptyMessage.style.display = 'block';
+            return;
+        }
+
+        emptyMessage.style.display = 'none';
+
+        users.forEach((user, index) => {
+            const imageHtml = user.image_url 
+                ? `<img src="${user.image_url}" class="user-avatar" onclick="showImage('${user.image_url}', '${user.name}')" alt="${user.name}">`
+                : `<div class="no-avatar">👤</div>`;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${imageHtml}</td>
+                <td><strong>${user.name}</strong></td>
+                <td>${user.user_id}</td>
+                <td>${formatDate(user.registered_at)}</td>
+                <td><span class="shift-badge">${user.num_encodings || 0} ảnh</span></td>
+                <td>
+                    <button class="btn btn-danger" style="padding: 0.5rem; font-size: 0.8rem;" onclick="deleteUser('${user.user_id}', '${user.name}')">
+                        🗑️ Xóa
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    // Load users
+    async function loadUsers() {
+        loadingSpinner.style.display = 'block';
+        tableContainer.style.display = 'none';
+
+        try {
+            const response = await fetch('/api/users');
+            const data = await response.json();
+
+            loadingSpinner.style.display = 'none';
+            tableContainer.style.display = 'block';
+
+            renderTable(data.users || []);
+
+        } catch (error) {
+            console.error('Error loading users:', error);
+            loadingSpinner.style.display = 'none';
+            tableContainer.style.display = 'block';
+            emptyMessage.style.display = 'block';
+            emptyMessage.textContent = '❌ Lỗi tải dữ liệu. Vui lòng thử lại!';
+        }
+    }
+
+    // Load on start
+    loadUsers();
+</script>
+{% endblock %}

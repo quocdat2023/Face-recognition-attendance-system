@@ -10,3 +10,5 @@ face-recognition
 opencv-python
 Pillow
 a2wsgi
+cloudinary
+python-dotenv

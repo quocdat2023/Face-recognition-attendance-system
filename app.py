@@ -1,9 +1,3 @@
-"""
-Face Recognition System
-Combines Flask (frontend) and FastAPI (backend API) in a single application
-Uses face_recognition library for encoding/matching, face-api.js for UI visualization
-"""
-
 from flask import Flask, render_template, send_from_directory
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +17,20 @@ from datetime import datetime
 from bson import ObjectId
 import os
 import json
+from dotenv import load_dotenv
+import cloudinary
+import cloudinary.uploader
+
+# Load environment variables
+load_dotenv()
+
+# Cloudinary Configuration
+cloudinary.config( 
+  cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME'), 
+  api_key = os.getenv('CLOUDINARY_API_KEY'), 
+  api_secret = os.getenv('CLOUDINARY_API_SECRET'),
+  secure = True
+)
 
 # ============================================================================
 # CONFIGURATION
@@ -33,7 +41,7 @@ DATABASE_NAME = "face_recognition_db"
 USERS_COLLECTION = "users"
 ATTENDANCE_COLLECTION = "attendance"
 FACE_MATCH_THRESHOLD = 0.6  # Lower is stricter
-NUM_IMAGES_FOR_REGISTRATION = 30  # Number of images to capture for registration
+NUM_IMAGES_FOR_REGISTRATION = 10  # Number of images to capture for registration
 
 # Shift configuration
 SHIFTS = {
@@ -74,6 +82,11 @@ def attendance():
     """Attendance records page"""
     return render_template('attendance.html')
 
+@flask_app.route('/users')
+def users():
+    """Registered users page"""
+    return render_template('users.html')
+
 # ============================================================================
 # FASTAPI APPLICATION (Backend API)
 # ============================================================================
@@ -104,11 +117,11 @@ except Exception as e:
 # PYDANTIC MODELS
 # ============================================================================
 
-class UserResponse(BaseModel):
     id: str
     name: str
     user_id: str
     registered_at: str
+    image_url: Optional[str] = None
 
 class FaceLocation(BaseModel):
     top: int
@@ -129,6 +142,7 @@ class AttendanceRecord(BaseModel):
     timestamp: str
     shift: int
     date: str
+    image_url: Optional[str] = None
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -237,7 +251,7 @@ async def register_user(
     user_id: str = Form(...),
     images: str = Form(...)  # JSON array of base64 images
 ):
-    """Register a new user with multiple face encodings (30 images)"""
+    """Register a new user with multiple face encodings (10 images)"""
     try:
         # Parse images from JSON
         image_list = json.loads(images)
@@ -281,12 +295,44 @@ async def register_user(
                 detail=f"Không đủ ảnh hợp lệ. Thành công: {len(face_encodings)}, Thất bại: {failed_count}"
             )
         
+        # Upload the first valid image to Cloudinary
+        image_url = None
+        try:
+            # Get the first valid image (we know there's at least one if we're here)
+            # Find the first image that resulted in a valid encoding
+            # For simplicity, we'll just take the first one from the list that is valid base64
+            # Ideally we keep track of which image produced the encoding, but picking the first one is fine for avatar
+            
+            # Use the first image in the list
+            first_img_base64 = image_list[0]
+            if ',' in first_img_base64:
+                first_img_base64 = first_img_base64.split(',')[1]
+                
+            image_bytes = base64.b64decode(first_img_base64)
+            
+            # Upload to Cloudinary
+            upload_result = cloudinary.uploader.upload(
+                image_bytes, 
+                folder="face_recognition/users",
+                public_id=f"user_{user_id}",
+                overwrite=True,
+                resource_type="image"
+            )
+            image_url = upload_result.get("secure_url")
+            print(f"Uploaded registration image to Cloudinary: {image_url}")
+            
+        except Exception as e:
+            print(f"Error uploading to Cloudinary: {e}")
+            # Continue even if upload fails
+        
+        
         # Save to database
         user_doc = {
             "name": name,
             "user_id": user_id,
             "face_encodings": face_encodings,  # Store list of encodings
             "num_encodings": len(face_encodings),
+            "image_url": image_url, # Store Cloudinary URL
             "registered_at": datetime.now().isoformat()
         }
         
@@ -296,6 +342,7 @@ async def register_user(
             "success": True,
             "message": f"Đăng ký thành công cho {name} với {len(face_encodings)} ảnh",
             "user_id": user_id,
+            "image_url": image_url,
             "num_encodings": len(face_encodings)
         })
         
@@ -362,6 +409,25 @@ async def recognize_faces(
                     message = f"{name} đã điểm danh ca {shift} ngày {date}"
                 else:
                     # Log attendance
+                    
+                    # Upload attendance image to Cloudinary
+                    attendance_image_url = None
+                    try:
+                        # Reset file pointer to beginning to read again
+                        await image.seek(0)
+                        file_content = await image.read()
+                        
+                        upload_result = cloudinary.uploader.upload(
+                            file_content,
+                            folder="face_recognition/attendance",
+                            public_id=f"attendance_{user_id}_{date}_{shift}_{int(datetime.now().timestamp())}",
+                            resource_type="image"
+                        )
+                        attendance_image_url = upload_result.get("secure_url")
+                        print(f"Uploaded attendance image: {attendance_image_url}")
+                    except Exception as e:
+                        print(f"Error uploading attendance image: {e}")
+
                     attendance_doc = {
                         "user_id": user_id,
                         "name": name,
@@ -369,7 +435,8 @@ async def recognize_faces(
                         "shift": shift,
                         "shift_name": SHIFTS[shift]["name"],
                         "timestamp": datetime.now().isoformat(),
-                        "confidence": confidence
+                        "confidence": confidence,
+                        "image_url": attendance_image_url
                     }
                     attendance_collection.insert_one(attendance_doc)
                     status = "success"
@@ -432,7 +499,8 @@ async def get_users():
                 "name": user['name'],
                 "user_id": user['user_id'],
                 "num_encodings": user.get('num_encodings', 1),
-                "registered_at": user['registered_at']
+                "registered_at": user['registered_at'],
+                "image_url": user.get('image_url')
             })
         
         return JSONResponse(content={"users": user_list})
@@ -481,13 +549,43 @@ async def get_attendance(limit: int = 100, date: str = None, shift: int = None):
                 "shift": record.get('shift', 0),
                 "shift_name": record.get('shift_name', 'N/A'),
                 "timestamp": record['timestamp'],
-                "confidence": record.get('confidence', 0.0)
+                "timestamp": record['timestamp'],
+                "confidence": record.get('confidence', 0.0),
+                "image_url": record.get('image_url')
             })
         
         return JSONResponse(content={"attendance": attendance_list})
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi lấy dữ liệu điểm danh: {str(e)}")
+
+@api.delete("/api/attendance/all")
+async def delete_all_attendance():
+    """Delete all attendance records"""
+    try:
+        result = attendance_collection.delete_many({})
+        return JSONResponse(content={
+            "success": True, 
+            "message": f"Đã xóa toàn bộ {result.deleted_count} bản ghi điểm danh"
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi xóa dữ liệu: {str(e)}")
+
+@api.delete("/api/attendance/{record_id}")
+async def delete_attendance_record(record_id: str):
+    """Delete a specific attendance record"""
+    try:
+        result = attendance_collection.delete_one({"_id": ObjectId(record_id)})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Không tìm thấy bản ghi")
+            
+        return JSONResponse(content={
+            "success": True, 
+            "message": "Đã xóa bản ghi điểm danh"
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi xóa bản ghi: {str(e)}")
 
 @api.get("/api/stats")
 async def get_stats():
