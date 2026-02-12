@@ -245,7 +245,7 @@ def check_duplicate_attendance(user_id, date_str, shift):
 # API ENDPOINTS
 # ============================================================================
 
-@api.post("/api/register")
+@api.post("/register")
 async def register_user(
     name: str = Form(...),
     user_id: str = Form(...),
@@ -351,7 +351,7 @@ async def register_user(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Đăng ký thất bại: {str(e)}")
 
-@api.post("/api/recognize")
+@api.post("/recognize")
 async def recognize_faces(
     image: UploadFile = File(...),
     date: str = Form(...),
@@ -473,12 +473,12 @@ async def recognize_faces(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Nhận diện thất bại: {str(e)}")
 
-@api.get("/api/shifts")
+@api.get("/shifts")
 async def get_shifts():
     """Get available shifts"""
     return JSONResponse(content={"shifts": SHIFTS})
 
-@api.get("/api/allowed-days")
+@api.get("/allowed-days")
 async def get_allowed_days():
     """Get allowed weekdays for attendance"""
     return JSONResponse(content={
@@ -486,7 +486,7 @@ async def get_allowed_days():
         "description": "0=Monday, 2=Wednesday, 4=Friday (Thu 2, Thu 4, Thu 6)"
     })
 
-@api.get("/api/users")
+@api.get("/users")
 async def get_users():
     """Get all registered users"""
     try:
@@ -508,7 +508,7 @@ async def get_users():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi lấy danh sách: {str(e)}")
 
-@api.delete("/api/users/{user_id}")
+@api.delete("/users/{user_id}")
 async def delete_user(user_id: str):
     """Delete a user"""
     try:
@@ -527,7 +527,7 @@ async def delete_user(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Xóa thất bại: {str(e)}")
 
-@api.get("/api/attendance")
+@api.get("/attendance")
 async def get_attendance(limit: int = 100, date: str = None, shift: int = None):
     """Get attendance records with optional filters"""
     try:
@@ -559,7 +559,7 @@ async def get_attendance(limit: int = 100, date: str = None, shift: int = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi lấy dữ liệu điểm danh: {str(e)}")
 
-@api.delete("/api/attendance/all")
+@api.delete("/attendance/all")
 async def delete_all_attendance():
     """Delete all attendance records"""
     try:
@@ -571,7 +571,7 @@ async def delete_all_attendance():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi xóa dữ liệu: {str(e)}")
 
-@api.delete("/api/attendance/{record_id}")
+@api.delete("/attendance/{record_id}")
 async def delete_attendance_record(record_id: str):
     """Delete a specific attendance record"""
     try:
@@ -587,7 +587,7 @@ async def delete_attendance_record(record_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi xóa bản ghi: {str(e)}")
 
-@api.get("/api/stats")
+@api.get("/stats")
 async def get_stats():
     """Get system statistics"""
     try:
@@ -642,9 +642,8 @@ if __name__ == "__main__":
     print("Face Recognition System")
     print("=" * 60)
     print("Flask (Frontend): http://localhost:5000")
-    print("FastAPI (API): http://localhost:5000/api/docs")
+    print("FastAPI (API): http://localhost:5000/docs")
     print("=" * 60)
     
-        
     # Run combined application
     run_simple('0.0.0.0', 5000, application, use_reloader=True, use_debugger=True)
