@@ -645,5 +645,6 @@ if __name__ == "__main__":
     print("FastAPI (API): http://localhost:5000/api/docs")
     print("=" * 60)
     
+        
     # Run combined application
-    run_simple('localhost', 5000, application, use_reloader=True, use_debugger=True)
+    run_simple('0.0.0.0', 5000, application, use_reloader=True, use_debugger=True)
