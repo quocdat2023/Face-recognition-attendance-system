@@ -1,5 +1,5 @@
 # Use official Python runtime as a parent image
-FROM python:3.9-slim
+FROM python:3.9-slim-bullseye
 
 # Set working directory
 WORKDIR /app
@@ -8,15 +8,14 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     cmake \
     build-essential \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+COPY requirements.txt ./
 
-# Install python dependencies
-# Note: dlib installation might take a few minutes
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
