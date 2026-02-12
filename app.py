@@ -36,7 +36,7 @@ cloudinary.config(
 # CONFIGURATION
 # ============================================================================
 
-MONGODB_URI = "mongodb://localhost:27017/"
+MONGODB_URI = "mongodb://mongo:27017/"
 DATABASE_NAME = "face_recognition_db"
 USERS_COLLECTION = "users"
 ATTENDANCE_COLLECTION = "attendance"
