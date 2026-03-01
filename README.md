@@ -98,16 +98,36 @@ Hệ thống sẽ khởi động tại: **http://localhost:5000**
 
 ```
 Face-recognition-attendance-system/
-├── app.py                 # Backend chính (Flask + FastAPI)
-├── requirements.txt       # Các thư viện cần thiết
-├── .env                   # Biến môi trường (User tự tạo)
-├── templates/             # Giao diện Frontend
-│   ├── base.html          # Layout chung
-│   ├── index.html         # Trang chủ
-│   ├── register.html      # Trang đăng ký (Logic chụp 10 ảnh)
-│   ├── users.html         # Trang quản lý người dùng
-│   ├── recognize.html     # Trang nhận diện/điểm danh
-│   └── attendance.html    # Trang lịch sử điểm danh
+├── app.py # Backend chính (Flask + FastAPI)
+├── config.py # Cấu hình ứng dụng
+├── requirements.txt # Các thư viện cần thiết
+├── .env # Biến môi trường (User tự tạo)
+├── docker-compose.yml # Tập tin cấu hình cho Docker Compose
+├── Dockerfile # Tập tin Docker để xây dựng image
+├── liveness_analysis.py # Dịch vụ phân tích sự sống
+├── models/ # Thư mục chứa mô hình
+│ ├── pycache/ # Thư mục chứa tệp biên dịch Python
+│ ├── attendance.py # Mô hình điểm danh
+│ ├── face_encoding.py # Mô hình mã hóa khuôn mặt
+│ └── user.py # Mô hình người dùng
+├── routes/ # Thư mục chứa các route
+│ ├── pycache/ # Thư mục chứa tệp biên dịch Python
+│ ├── api_routes.py # Định nghĩa các API routes
+│ ├── attendance_routes.py # Routes cho quản lý điểm danh
+│ └── user_routes.py # Routes cho quản lý người dùng
+├── services/ # Thư mục chứa các dịch vụ
+│ ├── pycache/ # Thư mục chứa tệp biên dịch Python
+│ ├── attendance_service.py # Dịch vụ liên quan đến điểm danh
+│ ├── cloudinary_service.py # Dịch vụ tương tác với Cloudinary
+│ ├── face_recognition.py # Dịch vụ nhận diện khuôn mặt
+│ └── liveness_analysis.py # Dịch vụ phân tích sự sống
+└── templates/ # Giao diện Frontend
+   ├── base.html # Layout chung
+   ├── index.html # Trang chủ
+   ├── register.html # Trang đăng ký (Logic chụp 10 ảnh)
+   ├── users.html # Trang quản lý người dùng
+   ├── recognize.html # Trang nhận diện/điểm danh
+   └── attendance.html # Trang lịch sử điểm danh
 └── README.md              # Hướng dẫn sử dụng
 ```
 
