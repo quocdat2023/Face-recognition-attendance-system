@@ -6,8 +6,10 @@ from pymongo import MongoClient
 load_dotenv()
 
 class Config:
+    # mongodb://localhost:27017
+    #mongodb://mongo:27017/
     # MongoDB Configuration
-    MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://mongo:27017/")
+    MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     DATABASE_NAME = os.getenv("DATABASE_NAME", "face_recognition_db")
     USERS_COLLECTION = "users"
     ATTENDANCE_COLLECTION = "attendance"
